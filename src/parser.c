@@ -119,15 +119,14 @@ ASTNode *parse_expr(TokenList list, int *pos, int current_binding_power) {
         return left;
 }
 
+// Inputs a stream of token and makes a Tree Node of Variable Assignments and
+// Declaration
 ASTNode *parse_var_decl(TokenList list, int *pos) {
         Token next_token = get_next_token(list, pos);
-        printf("Variable name %s token type  %d\n ", next_token.value,
-               next_token.type);
 
         if (next_token.type == IDENTIFIER_TOKEN) {
                 ASTNode *variable_name =
                     create_node(next_token.value, IDENTIFIER_NODE);
-                printf("variable name node created");
                 Token equals_token = get_next_token(list, pos);
 
                 if (equals_token.type == EQUALS_TOKEN) {
@@ -136,26 +135,39 @@ ASTNode *parse_var_decl(TokenList list, int *pos) {
                         ASTNode *expr_node = parse_expr(list, pos, 0);
                         eq_node->left = variable_name;
                         eq_node->right = expr_node;
-                        printf("equals node is returning now");
+
+                        Token semi_colontok = get_current_token(
+                            list, pos); // get_current_token is used here
+                                        // instead of get_next_token because
+                                        // parse_expr already looks forward
+                        if (semi_colontok.type == SEMICOLON_TOKEN) {
+                                get_next_token(
+                                    list, pos); // Consumes semi-colon token and
+                                                // moves on to next token
+                        }
+                        else {
+                                perror("Syntax Error: Semi-Colon Expected");
+                                exit(EXIT_FAILURE);
+                        }
 
                         return eq_node;
                 }
         }
-        printf("parse_var_decl returning null\n");
+        else {
+                perror("Syntax Error: Variable Name Not Found");
+                exit(EXIT_FAILURE);
+        }
         return NULL;
 }
 
 ASTNode *parse_statement(TokenList list, int *pos) {
-        Token next_token = get_current_token(list, pos);
+        Token next_token = get_next_token(list, pos);
 
-        printf("parse_statement: got token type %d, value '%s'\n",
-               next_token.type, next_token.value);
         if (next_token.type == KEYWORD_TOKEN) {
                 ASTNode *result = parse_var_decl(list, pos);
                 printf("parse_var_decl is is returning now");
                 return result;
         }
-        printf("it is returning null now");
         return NULL;
 }
 void print_ast(ASTNode *node, int depth) {
