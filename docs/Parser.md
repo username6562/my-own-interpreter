@@ -14,79 +14,76 @@ Where the higher the binding power the lower the operator goes down in the tree
 | `/`      | 20            |
 
 Lets use an example expression `1 + 2 * 3 + 4`
-
-The function starts off by getting the first number `1` producing an AST Number Node
-Then it gets the next token and uses the `get_binding_power` function to return the `next_bp (next_binding_power)` power of `+` which is `10`. It makes the check
-```c
-  if (current_binding_power >= next_bp) {
-    break;
-}
-```
-becuase 0 is not greater than 1 the loop continues and creates an Addition Node and assigns its left node to be number node 
-So now the current ast is looking like this
 ```txt
-                            +
-                        /        \
-                        1
+Index -   0   1   2   3   4   5  6
+Token -  '1' '+' '2' '*' '3' '+' 4' 
 ```
 
-To find its right node it recursively calls itself so a new copy is made with 10 now becoming the `current_binding_power`
+# ORIGINAL FUNCTION
+ **Because in the `../src/main.c` pos starts at -1
+ When we call `parse_primary` in order to get the next the Token `1` in our `parse_primary` we use `get_next_token` to increment pos by 1 now making pos 0** with the current binding power of 0
+ - Left = 1 
+ - In the loop we call get  we save the current position of pos in a variable called `save_pos`
+  The `saved_pos` variable is used to save the position before peeking at the next token. If we decide NOT to process the operator (because it has lower binding power), we restore the position so the caller can process it instead.
+ - We then use `get_next_token` to peek into the token stream  to get the `+` Token. Making pos 1 now
+ -  We use `get_binding_power('+')` to return the next_binding power which is 10
+ - Because 0 is not greater that 10 the loop doesn't break 
+ - Because the loop doesn't break the function generates a `ADDITION_NODE` and the left of the addition node becomes `1`
+ - To get the right node the function recursively calls itself making a new copy of itself with the new current_binding_power becoming 10
 
-## COPY 1
-The function starts  again by getting the next number which is  `2` and creates an AST Number Node. It then peeks ahead gets the next token which is `*` . It has the binding power of 20 and checks  makes this check again
-
-```c
-  if (current_binding_power >= next_bp) {
-    break;
-}
-```
-Because 10 is not greater than 20 the loop continues and makes the `MULTIPLICATION_NODE` and assigns 2 to be its left hand side . It then recursively makes another copy in order to find `copy 1`'s right hand side making 20 the `current_binding_power` of `copy 2`
-
-Now the ASTNode  is currently looking like this because `COPY 1` is the right hand side of the original function
+## COPY 1 `parse_expr(list , pos , 10)`
+**Copy 1 starts the same by using `parse_primary` function to get the left value `2` making pos to become 2
+- `saved_pos` now becomes 2
+- It then uses `get_next_token` to return the operator after it `*` making pos become 3
+- Then it gets the next_bp with the function `get_binding_power('*')` returning 20
+- Because 10 is not greater than 20 the loop doesn't break and creates a `MULTIPLICATION_NODE` 
+- The function then assigns left 2 to be its left hand side and recursively calls itself again with 20 now becoming the new `current_binding_power`
+## COPY 2 `parse_expr(list , pos , 20)`
+**Copy 2 gets the left value -> 3 now pos becomes 4
+- `saved_pos` then becomes 4
+- We use `get_next_token` to get the next operator `+` pos now becomes 5
+- WE get the next binding power with `get_binding_power('+')` -> 10
+- Because 20 is greater than 10
+- We then assign pos to be `saved_pos` so pos is now 4 again
+- The loop breaks and returns the left value 3
+- 3 then becomes the right value of `COPY 1` making `COPY 1`'s opNode look like this
 ```txt
-                             +
-		                /         \
-		                1          *
-		                        /
-		                        2
+                             *
+                        /         \
+                        2          3
 ```
 
-## COPY 2
-`
-`COPY 2` starts the same by getting the next number which is `34 and creates a Number Node. it then gets the next  token which is `+` having the binding power of  10. It then runs the same check
-
-```c
-  if (current_binding_power >= next_bp) {
-    break;
-}
-```
-now 20 (the current binding power of copy 2 ) is  greater than 10 the loop breaks and returns 3 to be the right hand side of `COPY 1` 
-now the ASTNode of the original function looks like this
-```txt
-                             +
-		                /         \
-		                1          *
-		                        /     \
-		                        2      3
-```
-It then assigns this current node to the original left variable of the original function
-Now that all the copies have been completed
-The original function's while loop continues cause it hasn't been broken yet the loop continues by getting the next token which is `+` , which has a binding power of 10 .
-Because the binding power of the original loop is 0 it checks 
-```c
-  if (current_binding_power >= next_bp) {
-    break;
-}
-```
-because 0 isn't greater than 10 the loop makes an `ADDITION_NODE` and assigns it left hand side to be the tree above and recursively called itself to get `3` as its right hand side
-so now the completed ASTNode becomes this
+**And because `COPY 1` is the right node of the original function**
+The full AST looks like this
 
 ```txt
-                                     +
-                             /             \
-                             +               4
-		                /         \
-		                1          *
-		                        /     \
-		                        2      3
+                      +       
+             /                \
+            1               *
+                        /         \
+                        2          3
 ```
+Now that the Tree Node has been gotten we make left the root node cause we are parsing from left to right
+
+BUT BECAUSE THE LOOP OF THE ORIGINAL FUNCTION HASNT BEEN BROKEN WE CONTINUE
+- We get the next operator because we assigned pos to be 4 previously we can now peek to the correct operator
+- Without that reassignment the next token would have been pointing to 4 and not the `+` operator
+- After getting the `+` operator we get its binding power -> 10
+- Since 0 is not greater than 10
+- the loop continues creates the `ADDITION_NODE` and assigns it left to be the Tree Node Above
+- And it gets the right node by recursion
+
+**NOTE: the loop terminates when a non operator token is found or when the current binding power is greater than the next binding power**
+
+### FINAL AST REPRESENTATION
+```txt
+                            +       
+                     /            \
+                                      4
+                     +       
+             /                \
+            1               *
+                        /         \
+                        2          3
+```
+
