@@ -16,25 +16,31 @@ ASTNode *create_node(char *value, NodeType type) {
         node->left = NULL;
         node->right = NULL;
         node->type = type;
+        node->child_count = 0;
 
         return node;
 }
 
+/*
+ * Parameters
+ *  - list: current array of tokens
+ *  - pos: current index of array
+ */
 Token get_current_token(TokenList list, int *pos) {
         Token token = list.tokens[*pos];
         return token;
 }
 
-/*
- * Returns the next token in the array of tokens
- * Parameters
- *  - list: current array of tokens
- *  - pos: current index of array
- */
 Token get_next_token(TokenList list, int *pos) {
         Token t = list.tokens[++(*pos)];
         return t;
 }
+
+Token get_prev_token(TokenList list, int *pos) {
+        Token t = list.tokens[--(*pos)];
+        return t;
+}
+
 /*
  *  Handles base balues like literals Identifiers , numbers
  *  Returns node node matching the token type
@@ -48,6 +54,10 @@ ASTNode *parse_primary(TokenList list, int *pos) {
         }
         else if (next_tok.type == IDENTIFIER_TOKEN) {
                 ASTNode *node = create_node(next_tok.value, IDENTIFIER_NODE);
+                return node;
+        }
+        else if (next_tok.type == STRING_TOKEN) {
+                ASTNode *node = create_node(next_tok.value, STRING_NODE);
                 return node;
         }
 
@@ -77,18 +87,20 @@ int get_binding_power(Token token) {
  */
 ASTNode *parse_expr(TokenList list, int *pos, int current_binding_power) {
         ASTNode *left = parse_primary(list, pos);
-        Token t = get_current_token(list, pos);
 
         while (true) {
+                int saved_pos = *pos;
                 Token next_tok = get_next_token(list, pos);
                 int next_bp = get_binding_power(next_tok);
 
                 if (current_binding_power >= next_bp) {
+                        *pos = saved_pos;
                         break;
                 }
                 ASTNode *opNode;
                 if (next_tok.type == BINARYOP_TOKEN) {
                         if (strcmp(next_tok.value, "+") == 0) {
+
                                 opNode =
                                     create_node(next_tok.value, ADDITION_NODE);
                         }
@@ -124,6 +136,7 @@ ASTNode *parse_expr(TokenList list, int *pos, int current_binding_power) {
 ASTNode *parse_var_decl(TokenList list, int *pos) {
         Token next_token = get_next_token(list, pos);
 
+        //  Makes an ASTNode for when a variable is  declared
         if (next_token.type == IDENTIFIER_TOKEN) {
                 ASTNode *variable_name =
                     create_node(next_token.value, IDENTIFIER_NODE);
@@ -136,22 +149,44 @@ ASTNode *parse_var_decl(TokenList list, int *pos) {
                         eq_node->left = variable_name;
                         eq_node->right = expr_node;
 
-                        Token semi_colontok = get_current_token(
+                        Token semi_colontok = get_next_token(
                             list, pos); // get_current_token is used here
                                         // instead of get_next_token because
                                         // parse_expr already looks forward
                         if (semi_colontok.type == SEMICOLON_TOKEN) {
-                                get_next_token(
-                                    list, pos); // Consumes semi-colon token and
-                                                // moves on to next token
+                                get_current_token(list, pos);
                         }
                         else {
-                                perror("Syntax Error: Semi-Colon Expected");
+                                perror("Syntax Error: Semi-Colon Expected\n");
                                 exit(EXIT_FAILURE);
                         }
 
                         return eq_node;
                 }
+        }
+        // Makes an AST if a variable has been assigned
+        else if (next_token.type == EQUALS_TOKEN) {
+                Token variable_name = get_prev_token(list, pos);
+
+                ASTNode *var_node =
+                    create_node(variable_name.value, IDENTIFIER_NODE);
+                Token eq_tok = get_next_token(list, pos);
+
+                ASTNode *eq_node = create_node(eq_tok.value, ASSIGNMENT_NODE);
+                ASTNode *expr_node = parse_expr(list, pos, 0);
+                eq_node->left = var_node;
+                eq_node->right = expr_node;
+
+                Token semi_colontok = get_current_token(list, pos);
+
+                if (semi_colontok.type == SEMICOLON_TOKEN) {
+                        get_next_token(list, pos);
+                }
+                else {
+                        perror("Syntax Error: Semi-Colon Expected");
+                        exit(EXIT_FAILURE);
+                }
+                return eq_node;
         }
         else {
                 perror("Syntax Error: Variable Name Not Found");
@@ -164,12 +199,32 @@ ASTNode *parse_statement(TokenList list, int *pos) {
         Token next_token = get_next_token(list, pos);
 
         if (next_token.type == KEYWORD_TOKEN) {
-                ASTNode *result = parse_var_decl(list, pos);
-                printf("parse_var_decl is is returning now");
-                return result;
+                return parse_var_decl(list, pos);
+        }
+        else if (next_token.type == IDENTIFIER_TOKEN) {
+                return parse_var_decl(list, pos);
         }
         return NULL;
 }
+
+// This function serves as the entry point of the parser
+ASTNode *parse(TokenList list, int *pos) {
+        ASTNode *root = create_node("root", BLOCK_NODE);
+
+        while (true) {
+                ASTNode *currentLine = parse_statement(list, pos);
+
+                if (currentLine != NULL) {
+                        root->children[root->child_count] = currentLine;
+                        root->child_count++;
+                }
+                else {
+                        break;
+                }
+        }
+        return root;
+}
+
 void print_ast(ASTNode *node, int depth) {
         if (node == NULL) {
                 return;
@@ -188,6 +243,9 @@ void print_ast(ASTNode *node, int depth) {
                 case IDENTIFIER_NODE:
                         printf("IDENTIFIER: %s\n", node->value);
                         break;
+                case STRING_NODE:
+                        printf("STRING: %s\n", node->value);
+                        break;
                 case ADDITION_NODE:
                         printf("ADDITION: %s\n", node->value);
                         break;
@@ -203,16 +261,26 @@ void print_ast(ASTNode *node, int depth) {
                 case ASSIGNMENT_NODE:
                         printf("ASSIGNMENT: %s\n", node->value);
                         break;
+                case BLOCK_NODE:
+                        printf("BLOCK: %s\n", node->value);
+                        // Print all children of the block node
+                        for (int i = 0; i < node->child_count; i++) {
+                                print_ast(node->children[i], depth + 1);
+                        }
+                        return; // Return after printing children to avoid
+                                // double traversal
                 default:
                         printf("UNKNOWN NODE: %s (type: %d)\n", node->value,
                                node->type);
                         break;
         }
 
-        // Recursively print children
+        // Recursively print left and right children for non-block nodes
+        //
         print_ast(node->left, depth + 1);
         print_ast(node->right, depth + 1);
 }
+
 void print_ast_tree(ASTNode *root) {
         printf("\n=== AST Tree ===\n");
         if (root == NULL) {
