@@ -7,21 +7,25 @@
 #define MAX_TOKENS 128
 #define MAX_TOKEN_LEN 256
 typedef enum {
-    INT_TOKEN,
-    BINARYOP_TOKEN,
-    EQUALS_TOKEN,
-    KEYWORD_TOKEN,
-    SEMICOLON_TOKEN,
-    IDENTIFIER_TOKEN
+        INT_TOKEN,
+        BINARYOP_TOKEN,
+        EQUALS_TOKEN,
+        KEYWORD_TOKEN,
+        SEMICOLON_TOKEN,
+        STRING_TOKEN,
+        IDENTIFIER_TOKEN,
+        L_PARENTHESIS,
+        R_PARENTHESIS,
+        EOF_TOKEN
 } TokenType;
 typedef struct {
-    TokenType type;
-    char *value;
+        TokenType type;
+        char *value;
 } Token;
 
 typedef struct {
-    Token *tokens;
-    int count;
+        Token *tokens;
+        int count;
 } TokenList;
 
 char *read_file(char *file_name);
