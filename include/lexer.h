@@ -1,7 +1,6 @@
 #ifndef LEXER_H
 #define LEXER_H
 
-#include <complex.h>
 #include <stdbool.h>
 
 #define MAX_TOKENS 128
@@ -16,6 +15,7 @@ typedef enum {
         IDENTIFIER_TOKEN,
         L_PARENTHESIS,
         R_PARENTHESIS,
+        BOOL_TOKEN,
         EOF_TOKEN
 } TokenType;
 typedef struct {
