@@ -84,7 +84,10 @@ Token tokenize(char *value, bool isString) {
         }
         // Binary Operators
         else if (strcmp(t.value, "+") == 0 || strcmp(t.value, "-") == 0 ||
-                 strcmp(t.value, "*") == 0 || strcmp(t.value, "/") == 0) {
+                 strcmp(t.value, "*") == 0 || strcmp(t.value, "/") == 0 ||
+                 strcmp(t.value, "==") == 0 || strcmp(t.value, "<=") == 0 ||
+                 strcmp(t.value, ">=") == 0 || strcmp(t.value, ">") == 0 ||
+                 strcmp(t.value, ">") == 0) {
                 t.type = BINARYOP_TOKEN;
         }
         // Equals To Sign
@@ -99,6 +102,10 @@ Token tokenize(char *value, bool isString) {
         else if (strcmp(t.value, "int") == 0 || strcmp(t.value, "bool") == 0 ||
                  strcmp(t.value, "string") == 0) {
                 t.type = KEYWORD_TOKEN;
+        }
+        else if (strcmp(t.value, "true") == 0 ||
+                 strcmp(t.value, "false") == 0) {
+                t.type = BOOL_TOKEN;
         }
         // Identifiers
         else if (isalpha(t.value[0])) {
@@ -121,6 +128,10 @@ TokenList create_token_list(const char *source) {
         TokenList list;
         list.tokens = malloc(sizeof(Token) * MAX_TOKENS);
         list.count = 0;
+        if (list.tokens == NULL) {
+                perror("Failed to allocate token list");
+                exit(EXIT_FAILURE);
+        }
 
         int i = 0;
         /*
@@ -138,7 +149,6 @@ TokenList create_token_list(const char *source) {
                         case '-':
                         case '*':
                         case '/':
-                        case '=':
                         case ';':
                         case '(':
                         case ')':
@@ -158,14 +168,57 @@ TokenList create_token_list(const char *source) {
                                         lexeme[pos++] = source[i++];
                                 }
                                 lexeme[pos] = '\0';
-                                printf("full string tokenized value %s\n",
-                                       lexeme);
                                 list.tokens[list.count] =
                                     tokenize(lexeme, true);
                                 list.count++;
-                                continue;
-                        }
+                                break;
+                        } break;
 
+                        case '<': {
+                                char next_char = source[++i];
+                                if (next_char == '=') {
+                                        list.tokens[list.count] =
+                                            tokenize("<=", false);
+                                        list.count++;
+                                }
+                                else {
+                                        list.tokens[list.count] =
+                                            tokenize("<", false);
+                                        list.count++;
+                                        i--;
+                                        break;
+                                }
+                        } break;
+                        case '>': {
+                                char next_char = source[++i];
+                                if (next_char == '=') {
+                                        list.tokens[list.count] =
+                                            tokenize(">=", false);
+                                        list.count++;
+                                }
+                                else {
+                                        list.tokens[list.count] =
+                                            tokenize(">", false);
+                                        list.count++;
+                                        i--;
+                                        break;
+                                }
+                        } break;
+                        case '=': {
+                                char next_char = source[++i];
+                                if (next_char == '=') {
+                                        list.tokens[list.count] =
+                                            tokenize("==", false);
+                                        list.count++;
+                                }
+                                else {
+                                        list.tokens[list.count] =
+                                            tokenize("=", false);
+                                        list.count++;
+                                        i--;
+                                        break;
+                                }
+                        } break;
                         default:
                                 // Skips Whitespaces
                                 if (isspace(source[i])) {
@@ -193,6 +246,7 @@ TokenList create_token_list(const char *source) {
                                         list.tokens[list.count] =
                                             tokenize(lexeme, false);
                                         list.count++;
+                                        pos = 0;
                                         continue;
                                 }
                 }
@@ -209,7 +263,9 @@ void print_tokens(TokenList list) {
         for (int i = 0; i < list.count; i++) {
                 Token token = list.tokens[i];
 
-                printf("Value: %s  ,  Type %d\n", token.value, token.type);
+                printf(
+                    "Value: %s               |Type %d               | Pos %d\n",
+                    token.value, token.type, i);
         }
 }
 
