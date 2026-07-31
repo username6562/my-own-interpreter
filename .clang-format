@@ -1,5 +1,9 @@
 BasedOnStyle: LLVM
-IndentWidth: 4
-TabWidth: 4
+IndentWidth: 8
+TabWidth: 8
 UseTab: Never
+BreakBeforeBraces: Custom
 IndentCaseLabels: true
+BraceWrapping:
+  AfterControlStatement: Never
+  BeforeElse: true 
