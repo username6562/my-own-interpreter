@@ -1,6 +1,7 @@
 #include "../include/ast.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 Expr *create_int_literal(char *value) {
         Expr *expr = malloc(sizeof(Expr));
@@ -18,6 +19,26 @@ Expr *create_identifier_literal(char *value) {
         expr->left = NULL;
         expr->right = NULL;
         expr->type = IDENTIFIER_LITERAL;
+
+        return expr;
+}
+
+Expr *create_bool_literal(char *value) {
+        Expr *expr = malloc(sizeof(Expr));
+        expr->value = value;
+        expr->left = NULL;
+        expr->right = NULL;
+        expr->type = BOOL_LITERAL;
+
+        return expr;
+}
+
+Expr *create_string_literal(char *value) {
+        Expr *expr = malloc(sizeof(Expr));
+        expr->value = value;
+        expr->left = NULL;
+        expr->right = NULL;
+        expr->type = STRING_LITERAL;
 
         return expr;
 }
@@ -44,6 +65,7 @@ Stmt *create_variable_decl_stmt(char *type, char *var_name, Expr *value,
 
         return stmt;
 }
+
 StmtList *create_stmt_list() {
         StmtList *list = malloc(sizeof(StmtList));
         list->statements = malloc(sizeof(Stmt *) * 100);
@@ -85,6 +107,15 @@ void print_stmt_list(StmtList *list) {
                 }
         }
 }
+
+void print_bool_literal(char *value) {
+        if (strcmp(value, "true") == 0) {
+                printf("true\n");
+        }
+        else if (strcmp(value, "false") == 0) {
+                printf("false\n");
+        }
+}
 void print_expr(Expr *expr) {
         if (expr == NULL) {
                 printf("(null expression)\n");
@@ -97,39 +128,82 @@ void print_expr(Expr *expr) {
                 case IDENTIFIER_LITERAL:
                         printf("IDENTIFIER: %s", expr->value);
                         break;
+                case BOOL_LITERAL:
+                        printf("BOOLEAN: ");
+                        print_bool_literal(expr->value);
+                        break;
+                case STRING_LITERAL:
+                        printf("STRING: %s\n", expr->value);
+                        break;
                 case ADDITION_OP:
                         printf("ADDITION (+)\n");
-                        printf("\tLEFT: ");
+                        printf("\tLEFT (+): ");
                         print_expr(expr->left);
-                        printf("\tRIGHT: ");
+                        printf("\tRIGHT (+): ");
                         print_expr(expr->right);
                         break;
                 case SUBTRACTION_OP:
                         printf("SUBTRACTION (-)\n");
-                        printf("\tLEFT: ");
+                        printf("\tLEFT (-): ");
                         print_expr(expr->left);
-                        printf("\tRIGHT: ");
+                        printf("\tRIGHT (-): ");
                         print_expr(expr->right);
                         break;
                 case MULTIPLICATION_OP:
                         printf("MULTIPLICATION (*)\n");
-                        printf("\tLEFT: ");
+                        printf("\tLEFT (*): ");
                         print_expr(expr->left);
-                        printf("\tRIGHT: ");
+                        printf("\tRIGHT: (*) ");
                         print_expr(expr->right);
                         break;
                 case DIVISION_OP:
                         printf("DIVISION (/)\n");
-                        printf("\tLEFT: ");
+                        printf("\tLEFT (/): ");
                         print_expr(expr->left);
-                        printf("\tRIGHT: ");
+                        printf("\tRIGHT (/): ");
                         print_expr(expr->right);
                         break;
                 case ASSIGNMENT_OP:
                         printf("ASSIGNMENT (=)\n");
-                        printf("\tLEFT: ");
+                        printf("\tLEFT (=): ");
                         print_expr(expr->left);
-                        printf("\tRIGHT: ");
+                        printf("\tRIGHT (=)kj: ");
+                        print_expr(expr->right);
+                        break;
+                case LESS_THAN_OP:
+                        printf("LESS THAN (<)\n");
+                        printf("\tLEFT (<): ");
+                        print_expr(expr->left);
+                        printf("\tRIGHT (<)kj: ");
+                        print_expr(expr->right);
+                        break;
+                case GREATER_THAN_OP:
+                        printf("GREATER THAN (>)\n");
+                        printf("\tLEFT (>): ");
+                        print_expr(expr->left);
+                        printf("\tRIGHT (>)kj: ");
+                        print_expr(expr->right);
+                        break;
+
+                case LT_OR_EQUAL_TO:
+                        printf("LESS THAN OR EQUAL TO (<=)\n");
+                        printf("\tLEFT (<=): ");
+                        print_expr(expr->left);
+                        printf("\tRIGHT (<=)kj: ");
+                        print_expr(expr->right);
+                        break;
+                case GT_OR_EQUAL_TO:
+                        printf("GREATER THAN OR EQUAL TO (>=)\n");
+                        printf("\tLEFT (>=): ");
+                        print_expr(expr->left);
+                        printf("\tRIGHT (>=)kj: ");
+                        print_expr(expr->right);
+                        break;
+                case EQUALS_TO_OP:
+                        printf("EQUAL TO (==)\n");
+                        printf("\tLEFT (==): ");
+                        print_expr(expr->left);
+                        printf("\tRIGHT (==)kj: ");
                         print_expr(expr->right);
                         break;
                 default:
