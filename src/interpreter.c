@@ -5,44 +5,164 @@
 #include <string.h>
 Scope *global_scope = NULL;
 
-int eval_int_expr(Expr *expr) {
-        switch (expr->type) {
-                case INT_LITERAL:
-                        return atoi(expr->value);
-                        break;
-                case ADDITION_OP:
-                        return eval_int_expr(expr->left) +
-                               eval_int_expr(expr->right);
-                        break;
-                case SUBTRACTION_OP:
-                        return eval_int_expr(expr->left) -
-                               eval_int_expr(expr->right);
-                        break;
-                case MULTIPLICATION_OP:
-                        return eval_int_expr(expr->left) *
-                               eval_int_expr(expr->right);
-                        break;
-                case DIVISION_OP:
-                        return eval_int_expr(expr->left) /
-                               eval_int_expr(expr->right);
-                        break;
+bool eval_bool_literal(Expr *expr) {
+        if (strcmp(expr->value, "true") == 0) {
+                return true;
+        }
+        else if (strcmp(expr->value, "false") == 0) {
+                return false;
+        }
+        return 0;
+}
 
+bool eval_comparison_expr(ExprType type, Value a, Value b) {
+        if (a.type != b.type)
+                return 0;
+
+        switch (type) {
+                case LESS_THAN_OP:
+                        return a.as.int_val < b.as.int_val;
+                        break;
+                case GREATER_THAN_OP:
+                        return a.as.int_val > b.as.int_val;
+                        break;
+                case LT_OR_EQUAL_TO:
+                        return a.as.int_val <= b.as.int_val;
+                        break;
+                case GT_OR_EQUAL_TO:
+                        return a.as.int_val >= b.as.int_val;
+                        break;
+                case EQUALS_TO_OP:
+                        switch (a.type) {
+                                case INT_VAL:
+                                        return a.as.int_val == b.as.int_val;
+                                        break;
+                                case BOOL_VAL:
+                                        return a.as.bool_val == b.as.bool_val;
+                                        break;
+                                default:
+                                        perror("Value type is not Supported By "
+                                               "The EQUALS TO OPERATOR");
+                                        exit(EXIT_FAILURE);
+                        }
+                        break;
+                default:
+                        perror("INVALID COMPARISON OPERATOR");
+                        exit(EXIT_FAILURE);
+        }
+}
+
+Value eval_expr(Expr *expr) {
+        switch (expr->type) {
+                case INT_LITERAL: {
+                        Value value;
+                        value.type = INT_VAL;
+                        value.as.int_val = atoi(expr->value);
+                        return value;
+                } break;
+                case STRING_LITERAL: {
+                        Value value;
+                        value.type = STRING_VAL;
+                        value.as.string_val = expr->value;
+
+                        return value;
+                } break;
+                case BOOL_LITERAL: {
+                        Value value;
+                        value.type = BOOL_VAL;
+                        value.as.bool_val = eval_bool_literal(expr);
+
+                        return value;
+                } break;
+                case ADDITION_OP: {
+                        Value left_val = eval_expr(expr->left);
+                        Value right_val = eval_expr(expr->right);
+                        Value result;
+                        result.as.int_val =
+                            left_val.as.int_val + right_val.as.int_val;
+
+                        return result;
+                } break;
+                case SUBTRACTION_OP: {
+                        Value left_val = eval_expr(expr->left);
+                        Value right_val = eval_expr(expr->right);
+                        Value result;
+                        result.type = INT_VAL;
+                        result.as.int_val =
+                            left_val.as.int_val - right_val.as.int_val;
+                        return result;
+                }
+
+                break;
+                case MULTIPLICATION_OP: {
+                        Value left_val = eval_expr(expr->left);
+                        Value right_val = eval_expr(expr->right);
+                        Value result;
+                        result.type = INT_VAL;
+                        result.as.int_val =
+                            left_val.as.int_val * right_val.as.int_val;
+                        return result;
+                } break;
+                case DIVISION_OP: {
+                        Value left_val = eval_expr(expr->left);
+                        Value right_val = eval_expr(expr->right);
+                        Value result;
+                        result.type = INT_VAL;
+                        result.as.int_val =
+                            left_val.as.int_val / right_val.as.int_val;
+                        return result;
+                } break;
+                case LESS_THAN_OP: {
+                        Value left_val = eval_expr(expr->left);
+                        Value right_val = eval_expr(expr->right);
+                        Value result;
+                        result.type = BOOL_VAL;
+                        result.as.bool_val = eval_comparison_expr(
+                            LESS_THAN_OP, left_val, right_val);
+                        return result;
+                } break;
+                case GREATER_THAN_OP: {
+                        Value left_val = eval_expr(expr->left);
+                        Value right_val = eval_expr(expr->right);
+                        Value result;
+                        result.type = BOOL_VAL;
+                        result.as.bool_val = eval_comparison_expr(
+                            GREATER_THAN_OP, left_val, right_val);
+                        return result;
+                } break;
+                case LT_OR_EQUAL_TO: {
+                        Value left_val = eval_expr(expr->left);
+                        Value right_val = eval_expr(expr->right);
+                        Value result;
+                        result.type = BOOL_VAL;
+                        result.as.bool_val = eval_comparison_expr(
+                            LT_OR_EQUAL_TO, left_val, right_val);
+                        return result;
+                } break;
+                case GT_OR_EQUAL_TO: {
+                        Value left_val = eval_expr(expr->left);
+                        Value right_val = eval_expr(expr->right);
+                        Value result;
+                        result.type = BOOL_VAL;
+                        result.as.bool_val = eval_comparison_expr(
+                            GT_OR_EQUAL_TO, left_val, right_val);
+                        return result;
+                } break;
+                case EQUALS_TO_OP: {
+                        Value left_val = eval_expr(expr->left);
+                        Value right_val = eval_expr(expr->right);
+                        Value result;
+                        result.type = BOOL_VAL;
+                        result.as.bool_val = eval_comparison_expr(
+                            EQUALS_TO_OP, left_val, right_val);
+                        return result;
+                } break;
                 default:
                         perror("Run Time Error Operator Not Supported By "
                                "Interpreter");
                         exit(EXIT_FAILURE);
         }
-        return 0;
-}
-
-bool eval_bool_literal(Expr *expr) {
-        if (strcmp(expr->value, "true")) {
-                return true;
-        }
-        else if (strcmp(expr->value, "false")) {
-                return false;
-        }
-        return 0;
+        return nil_var();
 }
 
 bool eval_bool_expr(Expr *expr) {
@@ -59,22 +179,69 @@ bool eval_bool_expr(Expr *expr) {
         return 0;
 }
 
-Variable eval_stmt_decl(Stmt stmt, Scope *current_scope) {
+Variable *eval_stmt_decl(Stmt stmt, Scope *current_scope) {
         switch (stmt.type) {
                 case VAR_DECL_STMT: {
                         if (strcmp(stmt.variable_decl.type, "int") == 0) {
-                                Variable variable;
-                                variable.name = stmt.variable_decl.var_name;
-                                variable.value.type = INT_VAL;
-                                variable.value.as.int_val =
-                                    eval_int_expr(stmt.variable_decl.value);
-                                set_variable(current_scope, variable);
+                                Variable *variable = create_variable();
+                                variable->name = stmt.variable_decl.var_name;
+                                variable->value.type = INT_VAL;
+                                Value value =
+                                    eval_expr(stmt.variable_decl.value);
+                                if (variable->value.type == value.type) {
+                                        set_variable(current_scope, variable);
+                                        variable->value = value;
+                                        return variable;
+                                }
+                                else {
+                                        perror(
+                                            "Assigning Variable To Wrong Type");
+                                        exit(1);
+                                }
+                        }
+                        else if (strcmp(stmt.variable_decl.type, "bool") == 0) {
+                                Variable *variable = create_variable();
+                                variable->name = stmt.variable_decl.var_name;
+                                variable->value.type = BOOL_VAL;
+                                Value value =
+                                    eval_expr(stmt.variable_decl.value);
+                                if (variable->value.type == value.type) {
+                                        variable->value = value;
+                                        set_variable(current_scope, variable);
+                                        variable->value = value;
+                                        return variable;
+                                }
+                                else {
+                                        perror(
+                                            "Assigning Variable To Wrong Type");
+                                        exit(1);
+                                }
+                        }
+                        else if (strcmp(stmt.variable_decl.type, "string") ==
+                                 0) {
+
+                                Variable *variable = create_variable();
+                                variable->name = stmt.variable_decl.var_name;
+                                variable->value.type = STRING_VAL;
+                                Value value =
+                                    eval_expr(stmt.variable_decl.value);
+                                if (variable->value.type == value.type) {
+                                        variable->value = value;
+                                        set_variable(current_scope, variable);
+                                        variable->value = value;
+                                        return variable;
+                                }
+                                else {
+                                        perror(
+                                            "Assigning Variable To Wrong Type");
+                                        exit(1);
+                                }
                         }
                 } break;
                 default:
-                        perror("Run Time Error: Statement Type Couldn't Be "
+                        perror("Run Time Error: Statement Type "
+                               "Couldn't Be "
                                "Gotten");
         }
-
-        return null_var();
+        return NULL;
 }
