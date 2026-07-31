@@ -5,12 +5,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 /*
  * Parameters
  *  - list: current array of tokens
  *  - pos: current index of array
  */
+Expr *parse_expr(TokenList list, int *pos, int current_binding_power);
+
 Token get_current_token(TokenList list, int *pos) {
         Token token = list.tokens[*pos];
         return token;
@@ -20,7 +21,6 @@ Token get_next_token(TokenList list, int *pos) {
         Token t = list.tokens[++(*pos)];
         return t;
 }
-
 Token get_prev_token(TokenList list, int *pos) {
         Token t = list.tokens[--(*pos)];
         return t;
@@ -32,7 +32,6 @@ Token get_prev_token(TokenList list, int *pos) {
  */
 Expr *parse_primary(TokenList list, int *pos) {
         Token next_tok = get_next_token(list, pos);
-
         if (next_tok.type == INT_TOKEN) {
                 Expr *node = create_int_literal(next_tok.value);
                 return node;
@@ -41,7 +40,21 @@ Expr *parse_primary(TokenList list, int *pos) {
                 Expr *node = create_identifier_literal(next_tok.value);
                 return node;
         }
-
+        else if (next_tok.type == L_PARENTHESIS) {
+                Expr *inner_expr = parse_expr(list, pos, 0);
+                Token close_paren = get_next_token(list, pos);
+                if (close_paren.type == R_PARENTHESIS) {
+                        return inner_expr;
+                }
+        }
+        else if (next_tok.type == BOOL_TOKEN) {
+                Expr *expr = create_bool_literal(next_tok.value);
+                return expr;
+        }
+        else if (next_tok.type == STRING_TOKEN) {
+                Expr *expr = create_string_literal(next_tok.value);
+                return expr;
+        }
         return NULL;
 }
 
@@ -49,10 +62,18 @@ int get_binding_power(Token token) {
         if (token.type == BINARYOP_TOKEN) {
                 if (strcmp(token.value, "+") == 0 ||
                     strcmp(token.value, "-") == 0) {
-                        return 10;
+                        return 15;
                 }
-                else {
+                else if (strcmp(token.value, "*") == 0 ||
+                         strcmp(token.value, "/") == 0) {
                         return 20;
+                }
+                else if (strcmp(token.value, "==") == 0 ||
+                         strcmp(token.value, "<=") == 0 ||
+                         strcmp(token.value, ">=") == 0 ||
+                         strcmp(token.value, ">") == 0 ||
+                         strcmp(token.value, ">") == 0) {
+                        return 10;
                 }
         }
         else if (token.type == EQUALS_TOKEN) {
@@ -68,12 +89,10 @@ int get_binding_power(Token token) {
  */
 Expr *parse_expr(TokenList list, int *pos, int current_binding_power) {
         Expr *left = parse_primary(list, pos);
-
         while (true) {
                 int saved_pos = *pos;
                 Token next_tok = get_next_token(list, pos);
                 int next_bp = get_binding_power(next_tok);
-
                 if (current_binding_power >= next_bp) {
                         *pos = saved_pos;
                         break;
@@ -104,6 +123,31 @@ Expr *parse_expr(TokenList list, int *pos, int current_binding_power) {
                                     parse_expr(list, pos, next_bp),
                                     DIVISION_OP);
                         }
+                        else if (strcmp(next_tok.value, "==") == 0) {
+                                opNode = create_binary_expr(
+                                    next_tok.value, left,
+                                    parse_expr(list, pos, 0), EQUALS_TO_OP);
+                        }
+                        else if (strcmp(next_tok.value, "<=") == 0) {
+                                opNode = create_binary_expr(
+                                    next_tok.value, left,
+                                    parse_expr(list, pos, 0), LT_OR_EQUAL_TO);
+                        }
+                        else if (strcmp(next_tok.value, ">=") == 0) {
+                                opNode = create_binary_expr(
+                                    next_tok.value, left,
+                                    parse_expr(list, pos, 0), GT_OR_EQUAL_TO);
+                        }
+                        else if (strcmp(next_tok.value, ">") == 0) {
+                                opNode = create_binary_expr(
+                                    next_tok.value, left,
+                                    parse_expr(list, pos, 0), GREATER_THAN_OP);
+                        }
+                        else if (strcmp(next_tok.value, "<") == 0) {
+                                opNode = create_binary_expr(
+                                    next_tok.value, left,
+                                    parse_expr(list, pos, 0), LESS_THAN_OP);
+                        }
                 }
                 else if (next_tok.type == EQUALS_TOKEN) {
                         opNode = create_binary_expr(
@@ -111,11 +155,11 @@ Expr *parse_expr(TokenList list, int *pos, int current_binding_power) {
                             parse_expr(list, pos, next_bp), ASSIGNMENT_OP);
                 }
                 else {
+                        *pos = saved_pos;
                         break;
                 }
                 left = opNode;
         }
-
         return left;
 }
 
@@ -124,17 +168,13 @@ Expr *parse_expr(TokenList list, int *pos, int current_binding_power) {
 Stmt *parse_var_decl(TokenList list, int *pos) {
         Token var_type = get_current_token(list, pos);
         Token next_token = get_next_token(list, pos);
-
         //  Makes an ASTNode for when a variable is  declared
         if (next_token.type == IDENTIFIER_TOKEN) {
                 Token equals_token = get_next_token(list, pos);
-
                 if (equals_token.type == EQUALS_TOKEN) {
                         Expr *expr_node = parse_expr(list, pos, 0);
-
                         Stmt *stmt = create_variable_decl_stmt(
                             var_type.value, next_token.value, expr_node, true);
-
                         Token semi_colontok = get_next_token(list, pos);
                         if (semi_colontok.type == SEMICOLON_TOKEN) {
                                 get_current_token(list, pos);
@@ -155,7 +195,6 @@ Stmt *parse_var_decl(TokenList list, int *pos) {
 
 Stmt *parse_statement(TokenList list, int *pos) {
         Token next_token = get_next_token(list, pos);
-
         if (next_token.type == KEYWORD_TOKEN) {
                 return parse_var_decl(list, pos);
         }
@@ -165,7 +204,6 @@ Stmt *parse_statement(TokenList list, int *pos) {
 // This function serves as the entry point of the parser
 StmtList *parse(TokenList list, int *pos) {
         StmtList *root = create_stmt_list();
-
         while (true) {
                 Stmt *currentLine = parse_statement(list, pos);
                 if (currentLine != NULL) {
