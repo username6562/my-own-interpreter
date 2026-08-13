@@ -43,8 +43,7 @@ Expr *create_string_literal(char *value) {
         return expr;
 }
 
-Expr *create_binary_expr(char *operator, Expr *left, Expr *right,
-                         ExprType type) {
+Expr *create_binary_expr(char *operator, Expr *left, Expr *right, ExprType type) {
         Expr *expr = malloc(sizeof(Expr));
         expr->value = operator;
         expr->left = left;
@@ -54,18 +53,34 @@ Expr *create_binary_expr(char *operator, Expr *left, Expr *right,
         return expr;
 }
 
-Stmt *create_variable_decl_stmt(char *type, char *var_name, Expr *value,
-                                bool is_declared) {
+Stmt *create_variable_decl_stmt(char *type, char *var_name, Expr *value) {
         Stmt *stmt = malloc(sizeof(Stmt));
         stmt->type = VAR_DECL_STMT;
         stmt->variable_decl.type = type;
         stmt->variable_decl.var_name = var_name;
         stmt->variable_decl.value = value;
-        stmt->variable_decl.is_declared = is_declared;
 
         return stmt;
 }
 
+Stmt *create_var_assignment_stmt(char *var_name, Expr *value) {
+        Stmt *stmt = malloc(sizeof(Stmt));
+        stmt->type = VAR_REASSIGN_STMT;
+        stmt->variable_decl.type = NULL;
+        stmt->variable_decl.var_name = var_name;
+        stmt->variable_decl.value = value;
+
+        return stmt;
+}
+
+Stmt *create_if_stmt(Expr *condition) {
+        Stmt *stmt = malloc(sizeof(Stmt));
+        stmt->type = IF_STMT;
+        stmt->if_stmt.stmts = create_stmt_list();
+        stmt->if_stmt.condition = condition;
+
+        return stmt;
+}
 StmtList *create_stmt_list() {
         StmtList *list = malloc(sizeof(StmtList));
         list->statements = malloc(sizeof(Stmt *) * 100);
@@ -84,26 +99,55 @@ void print_stmt_list(StmtList *list) {
 
         for (int i = 0; i < list->count; i++) {
                 Stmt *stmt = list->statements[i];
-                printf("\nStatement %d:\n", i + 1);
-
-                if (stmt == NULL) {
-                        printf("  (null statement)\n");
-                        continue;
+                if (stmt->type == IF_STMT) {
+                        printf("\nIf Statement %d:\n", i + 1);
                 }
-                switch (stmt->type) {
-                        case VAR_DECL_STMT:
-                                printf("TYPE: VAR_DECL_STMT\n");
-                                printf("VARIABLE TYPE: %s\n",
-                                       stmt->variable_decl.type);
-                                printf("VARIABLE NAME: %s\n",
-                                       stmt->variable_decl.var_name);
-                                printf("VALUE\n");
-                                if (stmt->variable_decl.value != NULL) {
-                                        print_expr(stmt->variable_decl.value);
+                else {
+                        printf("\nStatement %d:\n", i + 1);
+
+                        if (stmt == NULL) {
+                                printf("  (null statement)\n");
+                                continue;
+                        }
+                        switch (stmt->type) {
+                                case VAR_DECL_STMT: {
+                                        printf("TYPE: VAR_DECL_STMT\n");
+                                        if (stmt->variable_decl.type != NULL)
+                                                printf("VARIABLE TYPE: %s\n",
+                                                       stmt->variable_decl.type);
+                                        printf("VARIABLE NAME: %s\n",
+                                               stmt->variable_decl.var_name);
+                                        printf("VALUE\n");
+                                        if (stmt->variable_decl.value != NULL) {
+                                                print_expr(stmt->variable_decl.value);
+                                        }
+                                        else {
+                                                printf("NULL VARIABLE VALUE EXPR");
+                                        }
+                                        break;
                                 }
-                                else {
-                                        printf("NULL VARIABLE VALUE EXPR");
-                                }
+                                case VAR_REASSIGN_STMT: {
+                                        printf("TYPE: VAR_REASSIGN_STMT");
+                                        printf("VARIABLE NAME: %s\n",
+                                               stmt->variable_decl.var_name);
+                                        printf("VALUE\n");
+                                        if (stmt->variable_decl.value != NULL) {
+                                                print_expr(stmt->variable_decl.value);
+                                        }
+                                        else {
+                                                printf("NULL VARIABLE VALUE EXPR");
+                                        }
+                                } break;
+                                case IF_STMT:
+                                        printf("TYPE: IF_STMT");
+                                        printf("\n STMTS IN IF_STMT");
+                                        printf("if stmt count %d",
+                                               stmt->if_stmt.stmts->count);
+                                        print_stmt_list(stmt->if_stmt.stmts);
+                                        break;
+                                default:
+                                        printf("Statement Type Not Fount\n");
+                        }
                 }
         }
 }
@@ -196,7 +240,7 @@ void print_expr(Expr *expr) {
                         printf("GREATER THAN OR EQUAL TO (>=)\n");
                         printf("\tLEFT (>=): ");
                         print_expr(expr->left);
-                        printf("\tRIGHT (>=)kj: ");
+                        printf("\tRIGHT (>=): ");
                         print_expr(expr->right);
                         break;
                 case EQUALS_TO_OP:
