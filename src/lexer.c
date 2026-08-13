@@ -103,9 +103,17 @@ Token tokenize(char *value, bool isString) {
                  strcmp(t.value, "string") == 0) {
                 t.type = KEYWORD_TOKEN;
         }
-        else if (strcmp(t.value, "true") == 0 ||
-                 strcmp(t.value, "false") == 0) {
+        else if (strcmp(t.value, "true") == 0 || strcmp(t.value, "false") == 0) {
                 t.type = BOOL_TOKEN;
+        }
+        else if (strcmp(t.value, "if") == 0) {
+                t.type = IF_TOKEN;
+        }
+        else if (strcmp(t.value, "elif") == 0) {
+                t.type = ELIF_TOKEN;
+        }
+        else if (strcmp(t.value, "else") == 0) {
+                t.type = ELSE_TOKEN;
         }
         // Identifiers
         else if (isalpha(t.value[0])) {
@@ -115,11 +123,18 @@ Token tokenize(char *value, bool isString) {
         else if (strcmp(t.value, "(") == 0) {
                 t.type = L_PARENTHESIS;
         }
-
         else if (strcmp(t.value, ")") == 0) {
                 t.type = R_PARENTHESIS;
         }
-
+        else if (strcmp(t.value, ")") == 0) {
+                t.type = IF_TOKEN;
+        }
+        else if (strcmp(t.value, "{") == 0) {
+                t.type = L_CURLY_BRACKETS;
+        }
+        else if (strcmp(t.value, "}") == 0) {
+                t.type = R_CURLY_BRACKET;
+        }
         return t;
 }
 
@@ -152,10 +167,11 @@ TokenList create_token_list(const char *source) {
                         case ';':
                         case '(':
                         case ')':
+                        case '{':
+                        case '}':
                                 lexeme[0] = source[i];
                                 lexeme[1] = '\0';
-                                list.tokens[list.count] =
-                                    tokenize(lexeme, false);
+                                list.tokens[list.count] = tokenize(lexeme, false);
                                 list.count++;
                                 break;
 
@@ -168,8 +184,7 @@ TokenList create_token_list(const char *source) {
                                         lexeme[pos++] = source[i++];
                                 }
                                 lexeme[pos] = '\0';
-                                list.tokens[list.count] =
-                                    tokenize(lexeme, true);
+                                list.tokens[list.count] = tokenize(lexeme, true);
                                 list.count++;
                                 break;
                         } break;
@@ -177,13 +192,11 @@ TokenList create_token_list(const char *source) {
                         case '<': {
                                 char next_char = source[++i];
                                 if (next_char == '=') {
-                                        list.tokens[list.count] =
-                                            tokenize("<=", false);
+                                        list.tokens[list.count] = tokenize("<=", false);
                                         list.count++;
                                 }
                                 else {
-                                        list.tokens[list.count] =
-                                            tokenize("<", false);
+                                        list.tokens[list.count] = tokenize("<", false);
                                         list.count++;
                                         i--;
                                         break;
@@ -192,13 +205,11 @@ TokenList create_token_list(const char *source) {
                         case '>': {
                                 char next_char = source[++i];
                                 if (next_char == '=') {
-                                        list.tokens[list.count] =
-                                            tokenize(">=", false);
+                                        list.tokens[list.count] = tokenize(">=", false);
                                         list.count++;
                                 }
                                 else {
-                                        list.tokens[list.count] =
-                                            tokenize(">", false);
+                                        list.tokens[list.count] = tokenize(">", false);
                                         list.count++;
                                         i--;
                                         break;
@@ -207,13 +218,11 @@ TokenList create_token_list(const char *source) {
                         case '=': {
                                 char next_char = source[++i];
                                 if (next_char == '=') {
-                                        list.tokens[list.count] =
-                                            tokenize("==", false);
+                                        list.tokens[list.count] = tokenize("==", false);
                                         list.count++;
                                 }
                                 else {
-                                        list.tokens[list.count] =
-                                            tokenize("=", false);
+                                        list.tokens[list.count] = tokenize("=", false);
                                         list.count++;
                                         i--;
                                         break;
@@ -231,8 +240,7 @@ TokenList create_token_list(const char *source) {
                                                 lexeme[pos++] = source[i++];
                                         }
                                         lexeme[pos] = '\0';
-                                        list.tokens[list.count] =
-                                            tokenize(lexeme, false);
+                                        list.tokens[list.count] = tokenize(lexeme, false);
                                         list.count++;
                                         continue;
                                 }
@@ -243,8 +251,7 @@ TokenList create_token_list(const char *source) {
                                                 lexeme[pos++] = source[i++];
                                         }
                                         lexeme[pos] = '\0';
-                                        list.tokens[list.count] =
-                                            tokenize(lexeme, false);
+                                        list.tokens[list.count] = tokenize(lexeme, false);
                                         list.count++;
                                         pos = 0;
                                         continue;
@@ -252,8 +259,7 @@ TokenList create_token_list(const char *source) {
                 }
                 i++;
         }
-        list.tokens[list.count] =
-            (Token){.value = strdup("EOF"), .type = EOF_TOKEN};
+        list.tokens[list.count] = (Token){.value = strdup("EOF"), .type = EOF_TOKEN};
         list.count++;
 
         return list;
@@ -263,9 +269,8 @@ void print_tokens(TokenList list) {
         for (int i = 0; i < list.count; i++) {
                 Token token = list.tokens[i];
 
-                printf(
-                    "Value: %s               |Type %d               | Pos %d\n",
-                    token.value, token.type, i);
+                printf("Value: %s               |Type %d               | Pos %d\n", token.value,
+                       token.type, i);
         }
 }
 
