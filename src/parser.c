@@ -60,18 +60,14 @@ Expr *parse_primary(TokenList list, int *pos) {
 
 int get_binding_power(Token token) {
         if (token.type == BINARYOP_TOKEN) {
-                if (strcmp(token.value, "+") == 0 ||
-                    strcmp(token.value, "-") == 0) {
+                if (strcmp(token.value, "+") == 0 || strcmp(token.value, "-") == 0) {
                         return 15;
                 }
-                else if (strcmp(token.value, "*") == 0 ||
-                         strcmp(token.value, "/") == 0) {
+                else if (strcmp(token.value, "*") == 0 || strcmp(token.value, "/") == 0) {
                         return 20;
                 }
-                else if (strcmp(token.value, "==") == 0 ||
-                         strcmp(token.value, "<=") == 0 ||
-                         strcmp(token.value, ">=") == 0 ||
-                         strcmp(token.value, ">") == 0 ||
+                else if (strcmp(token.value, "==") == 0 || strcmp(token.value, "<=") == 0 ||
+                         strcmp(token.value, ">=") == 0 || strcmp(token.value, ">") == 0 ||
                          strcmp(token.value, ">") == 0) {
                         return 10;
                 }
@@ -100,59 +96,50 @@ Expr *parse_expr(TokenList list, int *pos, int current_binding_power) {
                 Expr *opNode;
                 if (next_tok.type == BINARYOP_TOKEN) {
                         if (strcmp(next_tok.value, "+") == 0) {
-                                opNode = create_binary_expr(
-                                    next_tok.value, left,
-                                    parse_expr(list, pos, next_bp),
-                                    ADDITION_OP);
+                                opNode =
+                                    create_binary_expr(next_tok.value, left,
+                                                       parse_expr(list, pos, next_bp), ADDITION_OP);
                         }
                         else if (strcmp(next_tok.value, "-") == 0) {
-                                opNode = create_binary_expr(
-                                    next_tok.value, left,
-                                    parse_expr(list, pos, next_bp),
-                                    SUBTRACTION_OP);
+                                opNode = create_binary_expr(next_tok.value, left,
+                                                            parse_expr(list, pos, next_bp),
+                                                            SUBTRACTION_OP);
                         }
                         else if (strcmp(next_tok.value, "*") == 0) {
-                                opNode = create_binary_expr(
-                                    next_tok.value, left,
-                                    parse_expr(list, pos, next_bp),
-                                    MULTIPLICATION_OP);
+                                opNode = create_binary_expr(next_tok.value, left,
+                                                            parse_expr(list, pos, next_bp),
+                                                            MULTIPLICATION_OP);
                         }
                         else if (strcmp(next_tok.value, "/") == 0) {
-                                opNode = create_binary_expr(
-                                    next_tok.value, left,
-                                    parse_expr(list, pos, next_bp),
-                                    DIVISION_OP);
+                                opNode =
+                                    create_binary_expr(next_tok.value, left,
+                                                       parse_expr(list, pos, next_bp), DIVISION_OP);
                         }
                         else if (strcmp(next_tok.value, "==") == 0) {
-                                opNode = create_binary_expr(
-                                    next_tok.value, left,
-                                    parse_expr(list, pos, 0), EQUALS_TO_OP);
+                                opNode = create_binary_expr(next_tok.value, left,
+                                                            parse_expr(list, pos, 0), EQUALS_TO_OP);
                         }
                         else if (strcmp(next_tok.value, "<=") == 0) {
                                 opNode = create_binary_expr(
-                                    next_tok.value, left,
-                                    parse_expr(list, pos, 0), LT_OR_EQUAL_TO);
+                                    next_tok.value, left, parse_expr(list, pos, 0), LT_OR_EQUAL_TO);
                         }
                         else if (strcmp(next_tok.value, ">=") == 0) {
                                 opNode = create_binary_expr(
-                                    next_tok.value, left,
-                                    parse_expr(list, pos, 0), GT_OR_EQUAL_TO);
+                                    next_tok.value, left, parse_expr(list, pos, 0), GT_OR_EQUAL_TO);
                         }
                         else if (strcmp(next_tok.value, ">") == 0) {
-                                opNode = create_binary_expr(
-                                    next_tok.value, left,
-                                    parse_expr(list, pos, 0), GREATER_THAN_OP);
+                                opNode =
+                                    create_binary_expr(next_tok.value, left,
+                                                       parse_expr(list, pos, 0), GREATER_THAN_OP);
                         }
                         else if (strcmp(next_tok.value, "<") == 0) {
-                                opNode = create_binary_expr(
-                                    next_tok.value, left,
-                                    parse_expr(list, pos, 0), LESS_THAN_OP);
+                                opNode = create_binary_expr(next_tok.value, left,
+                                                            parse_expr(list, pos, 0), LESS_THAN_OP);
                         }
                 }
                 else if (next_tok.type == EQUALS_TOKEN) {
-                        opNode = create_binary_expr(
-                            next_tok.value, left,
-                            parse_expr(list, pos, next_bp), ASSIGNMENT_OP);
+                        opNode = create_binary_expr(next_tok.value, left,
+                                                    parse_expr(list, pos, next_bp), ASSIGNMENT_OP);
                 }
                 else {
                         *pos = saved_pos;
@@ -163,27 +150,24 @@ Expr *parse_expr(TokenList list, int *pos, int current_binding_power) {
         return left;
 }
 
-// Inputs a stream of token and makes a Tree Node of Variable Assignments and
-// Declaration
 Stmt *parse_var_decl(TokenList list, int *pos) {
-        Token var_type = get_current_token(list, pos);
+        Token current_tok = get_current_token(list, pos);
         Token next_token = get_next_token(list, pos);
-        //  Makes an ASTNode for when a variable is  declared
         if (next_token.type == IDENTIFIER_TOKEN) {
                 Token equals_token = get_next_token(list, pos);
                 if (equals_token.type == EQUALS_TOKEN) {
+
                         Expr *expr_node = parse_expr(list, pos, 0);
-                        Stmt *stmt = create_variable_decl_stmt(
-                            var_type.value, next_token.value, expr_node, true);
                         Token semi_colontok = get_next_token(list, pos);
                         if (semi_colontok.type == SEMICOLON_TOKEN) {
-                                get_current_token(list, pos);
+                                Stmt *stmt = create_variable_decl_stmt(current_tok.value,
+                                                                       next_token.value, expr_node);
+                                return stmt;
                         }
                         else {
                                 perror("Syntax Error: Semi-Colon Expected\n");
                                 exit(EXIT_FAILURE);
                         }
-                        return stmt;
                 }
         }
         else {
@@ -193,10 +177,99 @@ Stmt *parse_var_decl(TokenList list, int *pos) {
         return NULL;
 }
 
+Stmt *parse_var_reassignment(TokenList list, int *pos) {
+        Token identifier_tok = get_current_token(list, pos);
+        Token next_tok = get_next_token(list, pos);
+
+        if (next_tok.type == EQUALS_TOKEN) {
+                Expr *value = parse_expr(list, pos, 0);
+                Token semi_colon_tok = get_next_token(list, pos);
+
+                if (semi_colon_tok.type == SEMICOLON_TOKEN) {
+                        Stmt *stmt = create_var_assignment_stmt(identifier_tok.value, value);
+
+                        return stmt;
+                }
+                else {
+                        perror("Syntax Error: Semi-Colon Expected\n");
+                        exit(EXIT_FAILURE);
+                }
+        }
+        else {
+                perror("Syntax Error Assignment Operator Expected\n");
+                exit(EXIT_FAILURE);
+        }
+
+        return NULL;
+}
+
+Stmt *parse_if_stmt(TokenList list, int *pos) {
+        Token next_tok = get_next_token(list, pos);
+
+        if (next_tok.type != L_PARENTHESIS) {
+                printf("Syntax Error Expected Open Bracket After 'if' Keyword");
+                exit(EXIT_FAILURE);
+        }
+
+        if (next_tok.type == L_PARENTHESIS) {
+                Expr *coondition_node = parse_expr(list, pos, 0);
+                Token close_paren = get_next_token(list, pos);
+
+                if (close_paren.type == R_PARENTHESIS) {
+                        Token left_curly_tok = get_next_token(list, pos);
+                        if (left_curly_tok.type == L_CURLY_BRACKETS) {
+
+                                Stmt *stmt = create_if_stmt(coondition_node);
+
+                                while (true) {
+                                        if (get_current_token(list, pos).type == R_CURLY_BRACKET ||
+                                            get_current_token(list, pos).type == EOF_TOKEN) {
+                                                break;
+                                        }
+                                        Stmt *current_line = parse_statement(list, pos);
+                                        if (current_line != NULL) {
+                                                stmt->if_stmt.stmts
+                                                    ->statements[stmt->if_stmt.stmts->count] =
+                                                    current_line;
+                                                stmt->if_stmt.stmts->count++;
+                                        }
+                                        else {
+                                                break;
+                                        }
+                                }
+
+                                Token next_token = get_next_token(list, pos);
+
+                                if (next_token.type == ELIF_TOKEN) {
+                                        Stmt *elif_stmt = parse_if_stmt(list, pos);
+
+                                        stmt->if_stmt.elif_stmt = elif_stmt;
+                                }
+                                else {
+                                        stmt->if_stmt.elif_stmt = NULL;
+                                }
+
+                                return stmt;
+                        }
+                }
+        }
+        return NULL;
+}
+
 Stmt *parse_statement(TokenList list, int *pos) {
         Token next_token = get_next_token(list, pos);
         if (next_token.type == KEYWORD_TOKEN) {
                 return parse_var_decl(list, pos);
+        }
+        else if (next_token.type == IDENTIFIER_TOKEN) {
+                return parse_var_reassignment(list, pos);
+        }
+        else if (next_token.type == IF_TOKEN) {
+                return parse_if_stmt(list, pos);
+        }
+        else if (next_token.type == ELIF_TOKEN) {
+                printf("Syntax Error Cannot Use Elif Keyword Without An If Keyowrd\n");
+                exit(EXIT_FAILURE);
         }
         return NULL;
 }
@@ -205,6 +278,10 @@ Stmt *parse_statement(TokenList list, int *pos) {
 StmtList *parse(TokenList list, int *pos) {
         StmtList *root = create_stmt_list();
         while (true) {
+                if (get_current_token(list, pos).type == EOF_TOKEN) {
+                        break;
+                }
+
                 Stmt *currentLine = parse_statement(list, pos);
                 if (currentLine != NULL) {
                         root->statements[root->count] = currentLine;
