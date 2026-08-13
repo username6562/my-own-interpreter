@@ -13,11 +13,17 @@ typedef enum {
         SEMICOLON_TOKEN,
         STRING_TOKEN,
         IDENTIFIER_TOKEN,
-        L_PARENTHESIS,
-        R_PARENTHESIS,
+        L_PARENTHESIS, // Left Parenthesis (
+        R_PARENTHESIS, // Right Pareenthesis )
+        L_CURLY_BRACKETS,
+        R_CURLY_BRACKET,
         BOOL_TOKEN,
+        IF_TOKEN,
+        ELIF_TOKEN,
+        ELSE_TOKEN,
         EOF_TOKEN
 } TokenType;
+
 typedef struct {
         TokenType type;
         char *value;
@@ -30,7 +36,6 @@ typedef struct {
 
 char *read_file(char *file_name);
 TokenList create_token_list(const char *source);
-bool is_integer(char *str);
 void print_tokens(TokenList list);
 
 void free_token_list(TokenList *list);
