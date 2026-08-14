@@ -18,6 +18,7 @@ There are three main functions needed for the pipeline
 | `read_file`         | inputs the name of the file and returns all the contents in a string                                                    |
 | `tokenize`          | inputs a string and returns a token with the correct type                                                               |
 | `create_token_list` | loops through the  source code created by `read_file` ,  divides it into chunks for `tokenize`  to create the functions |
+
 The Lexer has two distinct phases
 ### Stage 1: Reading the Source File
 The `read_file(char *file_name)` is responsible for this stage .
