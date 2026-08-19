@@ -166,7 +166,7 @@ Value eval_expr(Scope *current_scope, Expr *expr) {
         return nil_var();
 }
 
-Variable *eval_stmt_decl(Stmt *stmt, Scope *current_scope) {
+Variable *eval_stmts(Stmt *stmt, Scope *current_scope) {
         printf("Processing statement type: %d\n", stmt->type);
         switch (stmt->type) {
                 case VAR_DECL_STMT: {
@@ -233,8 +233,6 @@ Variable *eval_stmt_decl(Stmt *stmt, Scope *current_scope) {
                 case IF_STMT: {
                         Value if_condition = eval_expr(current_scope, stmt->if_stmt.condition);
                         Stmt *elif_stmt = stmt->if_stmt.elif_stmt;
-                        Value elif_condition =
-                            eval_expr(current_scope, elif_stmt->if_stmt.condition);
 
                         if (if_condition.type != BOOL_VAL) {
                                 printf("Type Error Expected Boolean Type Not Found In "
@@ -247,7 +245,7 @@ Variable *eval_stmt_decl(Stmt *stmt, Scope *current_scope) {
                                 for (int i = 0; i < stmt->if_stmt.stmts->count; i++) {
                                         Stmt *current_if_stmt = stmt->if_stmt.stmts->statements[i];
 
-                                        eval_stmt_decl(current_if_stmt, new_scope);
+                                        eval_stmts(current_if_stmt, new_scope);
                                 }
                                 print_scope(new_scope);
                                 exit_scope(new_scope);
@@ -257,21 +255,31 @@ Variable *eval_stmt_decl(Stmt *stmt, Scope *current_scope) {
                          *  If if_condition is not true and elif_stmt is not null and elif_condition
                          * is not false
                          */
-                        else if (if_condition.as.bool_val != true &&
-                                 stmt->if_stmt.elif_stmt != NULL &&
-                                 elif_condition.as.bool_val != false) {
+                        else if (elif_stmt != NULL) {
                                 Scope *elif_scope = enter_scope(current_scope);
-                                for (int i = 0; i < elif_stmt->if_stmt.stmts->count; i++) {
-                                        Stmt *current_elif =
-                                            elif_stmt->if_stmt.stmts->statements[i];
-                                        eval_stmt_decl(current_elif, elif_scope);
-                                }
-
-                                printf("wlif scope variable are \n");
-                                print_scope(elif_scope);
+                                eval_stmts(elif_stmt, elif_scope);
 
                                 exit_scope(elif_scope);
                         }
+
+                } break;
+                case ELSE_STMT: {
+                        for (int i = 0; i < stmt->else_stmt.stmts->count; i++) {
+                                Stmt *current_stmt = stmt->else_stmt.stmts->statements[i];
+
+                                eval_stmts(current_stmt, current_scope);
+                        }
+                } break;
+                case WHILE_STMT: {
+                        Value while_condition =
+                            eval_expr(current_scope, stmt->while_stmt.condition);
+                        int i = 0;
+
+                        while (while_condition.as.bool_val == true) {
+                                Stmt *current_stmt = stmt->while_stmt.stmts->statements[i++];
+                                eval_stmts(current_stmt, current_scope);
+                        }
+                        printf("loop ran %d time", i);
 
                 } break;
                 default:
