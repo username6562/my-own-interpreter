@@ -13,6 +13,7 @@
  */
 Expr *parse_expr(TokenList list, int *pos, int current_binding_power);
 
+Argument *parse_args(TokenList list, int *pos);
 Token get_current_token(TokenList list, int *pos) {
         Token token = list.tokens[*pos];
         return token;
@@ -27,13 +28,13 @@ Token get_prev_token(TokenList list, int *pos) {
         return t;
 }
 
-void parse_block(StmtList *stmts, TokenList list, int *pos) {
+void parse_block(StmtList *stmts, TokenList list, int *pos, bool is_in_function) {
         while (true) {
-                if (get_current_token(list, pos).type == R_PARENTHESIS) {
+                if (get_current_token(list, pos).type == R_CURLY_BRACKET) {
                         break;
                 }
 
-                Stmt *current_line = parse_statement(list, pos);
+                Stmt *current_line = parse_statement(list, pos, is_in_function);
 
                 if (current_line != NULL) {
                         stmts->statements[stmts->count] = current_line;
@@ -56,8 +57,23 @@ Expr *parse_primary(TokenList list, int *pos) {
                 return node;
         }
         else if (next_tok.type == IDENTIFIER_TOKEN) {
-                Expr *node = create_identifier_literal(next_tok.value);
-                return node;
+                if (get_next_token(list, pos).type == L_PARENTHESIS) {
+                        Argument *args = parse_args(list, pos);
+                        Token close_paren = get_current_token(list, pos);
+                        if (close_paren.type == R_PARENTHESIS) {
+                                Expr *func_expr = create_funct_call(next_tok.value, args);
+
+                                return func_expr;
+                        }
+                        else {
+                                printf("Syntax Error Right Parenthesis ')' Not Found\n");
+                        }
+                }
+                else {
+                        get_prev_token(list, pos);
+                        Expr *node = create_identifier_literal(next_tok.value);
+                        return node;
+                }
         }
         else if (next_tok.type == L_PARENTHESIS) {
                 Expr *inner_expr = parse_expr(list, pos, 0);
@@ -105,6 +121,7 @@ int get_binding_power(Token token) {
  */
 Expr *parse_expr(TokenList list, int *pos, int current_binding_power) {
         Expr *left = parse_primary(list, pos);
+        printf("left value %s", left->value);
         while (true) {
                 int saved_pos = *pos;
                 Token next_tok = get_next_token(list, pos);
@@ -113,59 +130,63 @@ Expr *parse_expr(TokenList list, int *pos, int current_binding_power) {
                         *pos = saved_pos;
                         break;
                 }
-                Expr *opNode;
+                Expr *op_node;
                 if (next_tok.type == BINARYOP_TOKEN) {
                         if (strcmp(next_tok.value, "+") == 0) {
-                                opNode =
+                                op_node =
                                     create_binary_expr(next_tok.value, left,
                                                        parse_expr(list, pos, next_bp), ADDITION_OP);
                         }
                         else if (strcmp(next_tok.value, "-") == 0) {
-                                opNode = create_binary_expr(next_tok.value, left,
-                                                            parse_expr(list, pos, next_bp),
-                                                            SUBTRACTION_OP);
+                                op_node = create_binary_expr(next_tok.value, left,
+                                                             parse_expr(list, pos, next_bp),
+                                                             SUBTRACTION_OP);
                         }
                         else if (strcmp(next_tok.value, "*") == 0) {
-                                opNode = create_binary_expr(next_tok.value, left,
-                                                            parse_expr(list, pos, next_bp),
-                                                            MULTIPLICATION_OP);
+                                op_node = create_binary_expr(next_tok.value, left,
+                                                             parse_expr(list, pos, next_bp),
+                                                             MULTIPLICATION_OP);
                         }
                         else if (strcmp(next_tok.value, "/") == 0) {
-                                opNode =
+                                op_node =
                                     create_binary_expr(next_tok.value, left,
                                                        parse_expr(list, pos, next_bp), DIVISION_OP);
                         }
                         else if (strcmp(next_tok.value, "==") == 0) {
-                                opNode = create_binary_expr(next_tok.value, left,
-                                                            parse_expr(list, pos, 0), EQUALS_TO_OP);
+                                op_node = create_binary_expr(next_tok.value, left,
+                                                             parse_expr(list, pos, next_bp),
+                                                             EQUALS_TO_OP);
                         }
                         else if (strcmp(next_tok.value, "<=") == 0) {
-                                opNode = create_binary_expr(
-                                    next_tok.value, left, parse_expr(list, pos, 0), LT_OR_EQUAL_TO);
+                                op_node = create_binary_expr(next_tok.value, left,
+                                                             parse_expr(list, pos, next_bp),
+                                                             LT_OR_EQUAL_TO);
                         }
                         else if (strcmp(next_tok.value, ">=") == 0) {
-                                opNode = create_binary_expr(
-                                    next_tok.value, left, parse_expr(list, pos, 0), GT_OR_EQUAL_TO);
+                                op_node = create_binary_expr(next_tok.value, left,
+                                                             parse_expr(list, pos, next_bp),
+                                                             GT_OR_EQUAL_TO);
                         }
                         else if (strcmp(next_tok.value, ">") == 0) {
-                                opNode =
-                                    create_binary_expr(next_tok.value, left,
-                                                       parse_expr(list, pos, 0), GREATER_THAN_OP);
+                                op_node = create_binary_expr(next_tok.value, left,
+                                                             parse_expr(list, pos, next_bp),
+                                                             GREATER_THAN_OP);
                         }
                         else if (strcmp(next_tok.value, "<") == 0) {
-                                opNode = create_binary_expr(next_tok.value, left,
-                                                            parse_expr(list, pos, 0), LESS_THAN_OP);
+                                op_node = create_binary_expr(next_tok.value, left,
+                                                             parse_expr(list, pos, next_bp),
+                                                             LESS_THAN_OP);
                         }
                 }
                 else if (next_tok.type == EQUALS_TOKEN) {
-                        opNode = create_binary_expr(next_tok.value, left,
-                                                    parse_expr(list, pos, next_bp), ASSIGNMENT_OP);
+                        op_node = create_binary_expr(next_tok.value, left,
+                                                     parse_expr(list, pos, next_bp), ASSIGNMENT_OP);
                 }
                 else {
                         *pos = saved_pos;
                         break;
                 }
-                left = opNode;
+                left = op_node;
         }
         return left;
 }
@@ -176,11 +197,9 @@ Stmt *parse_var_decl(TokenList list, int *pos) {
         if (next_token.type == IDENTIFIER_TOKEN) {
                 Token equals_token = get_next_token(list, pos);
                 if (equals_token.type == EQUALS_TOKEN) {
-
+                        printf("\n\n The expression is below??\n");
                         Expr *expr_node = parse_expr(list, pos, 0);
-                        print_expr(expr_node);
                         Token semi_colontok = get_next_token(list, pos);
-                        printf("semi colon token value %s\n", semi_colontok.value);
                         if (semi_colontok.type == SEMICOLON_TOKEN) {
                                 Stmt *stmt = create_variable_decl_stmt(current_tok.value,
                                                                        next_token.value, expr_node);
@@ -234,8 +253,7 @@ Stmt *parse_else_stmt(TokenList list, int *pos) {
                         if (get_current_token(list, pos).type == R_CURLY_BRACKET) {
                                 break;
                         }
-
-                        Stmt *current_line = parse_statement(list, pos);
+                        Stmt *current_line = parse_statement(list, pos, false);
 
                         if (current_line != NULL) {
                                 stmt->else_stmt.stmts->statements[stmt->else_stmt.stmts->count] =
@@ -252,7 +270,7 @@ Stmt *parse_else_stmt(TokenList list, int *pos) {
         return NULL;
 }
 
-Stmt *parse_if_stmt(TokenList list, int *pos) {
+Stmt *parse_cond_stmt(TokenList list, int *pos) {
         Token next_tok = get_next_token(list, pos);
 
         if (next_tok.type != L_PARENTHESIS) {
@@ -275,7 +293,7 @@ Stmt *parse_if_stmt(TokenList list, int *pos) {
                                             get_current_token(list, pos).type == EOF_TOKEN) {
                                                 break;
                                         }
-                                        Stmt *current_line = parse_statement(list, pos);
+                                        Stmt *current_line = parse_statement(list, pos, false);
                                         if (current_line != NULL) {
                                                 stmt->if_stmt.stmts
                                                     ->statements[stmt->if_stmt.stmts->count] =
@@ -290,7 +308,7 @@ Stmt *parse_if_stmt(TokenList list, int *pos) {
                                 Token next_token = get_next_token(list, pos);
 
                                 if (next_token.type == ELIF_TOKEN) {
-                                        Stmt *elif_stmt = parse_if_stmt(list, pos);
+                                        Stmt *elif_stmt = parse_cond_stmt(list, pos);
 
                                         stmt->if_stmt.elif_stmt = elif_stmt;
                                 }
@@ -323,7 +341,7 @@ Stmt *parse_while_stmt(TokenList list, int *pos) {
                         if (left_curly_tok.type == L_CURLY_BRACKETS) {
                                 Stmt *stmt = create_while_stmt(condition_node);
 
-                                parse_block(stmt->while_stmt.stmts, list, pos);
+                                parse_block(stmt->while_stmt.stmts, list, pos, false);
                                 return stmt;
                         }
                 }
@@ -343,8 +361,7 @@ Stmt *parse_for_stmt(TokenList list, int *pos) {
 
                         if (left_curly_tok.type == L_CURLY_BRACKETS) {
                                 Stmt *stmt = create_for_stmt(count);
-
-                                parse_block(stmt->for_stmt.stmts, list, pos);
+                                parse_block(stmt->for_stmt.stmts, list, pos, false);
 
                                 return stmt;
                         }
@@ -356,8 +373,9 @@ Stmt *parse_for_stmt(TokenList list, int *pos) {
 Parameter *parse_parameter(TokenList list, int *pos) {
         Parameter *current;
         Parameter *head = NULL;
+        int count = 0;
 
-        while (get_current_token(list, pos).type != L_PARENTHESIS) {
+        while (get_current_token(list, pos).type != R_PARENTHESIS) {
 
                 Token param_type = get_next_token(list, pos);
                 Token param_name = get_next_token(list, pos);
@@ -365,7 +383,8 @@ Parameter *parse_parameter(TokenList list, int *pos) {
                 Parameter *p = malloc(sizeof(Parameter));
                 p->name = param_name.value;
                 p->type = param_type.value;
-
+                p->count = ++count;
+                p->next = NULL;
                 if (head == NULL) {
                         head = p;
                         current = p;
@@ -374,7 +393,14 @@ Parameter *parse_parameter(TokenList list, int *pos) {
                         current->next = p;
                         current = p;
                 }
+
+                if (get_current_token(list, pos).type == R_PARENTHESIS) {
+                        break;
+                }
                 get_next_token(list, pos);
+        }
+        if (head != NULL) {
+                head->count = count;
         }
         return head;
 }
@@ -387,7 +413,7 @@ Stmt *parse_funct_decl(TokenList list, int *pos) {
 
                 if (get_next_token(list, pos).type == L_CURLY_BRACKETS) {
                         Stmt *stmt = create_func_decl_stmt(func_name.value, params);
-                        parse_block(stmt->func_decl.stmts, list, pos);
+                        parse_block(stmt->func_decl.stmts, list, pos, true);
 
                         return stmt;
                 }
@@ -399,10 +425,12 @@ Stmt *parse_funct_decl(TokenList list, int *pos) {
 Argument *parse_args(TokenList list, int *pos) {
         Argument *head = NULL;
         Argument *current;
+        int count = 0;
 
         while (get_current_token(list, pos).type != R_PARENTHESIS) {
                 Argument *a = malloc(sizeof(Argument));
                 a->expr = parse_expr(list, pos, 0);
+                count++;
 
                 if (head == NULL) {
                         head = a;
@@ -414,45 +442,41 @@ Argument *parse_args(TokenList list, int *pos) {
                 }
                 get_next_token(list, pos);
         }
+        if (head != NULL) {
+                head->count = count;
+        }
 
         return head;
 }
 
-Stmt *parse_func_call(TokenList list, int *pos) {
-        Token func_name = get_current_token(list, pos);
-        Token next_token = get_next_token(list, pos);
+Stmt *parse_ret_stmt(TokenList list, int *pos) {
+        Stmt *stmt = malloc(sizeof(Stmt));
+        stmt->type = RETURN_STMT;
+        Expr *return_value = parse_expr(list, pos, 0);
+        stmt->return_stmt.ret_value = return_value;
 
-        if (next_token.type == L_PARENTHESIS) {
-                Argument *args = parse_args(list, pos);
-                Token left_curly_tok = get_current_token(list, pos);
+        if (get_next_token(list, pos).type != SEMICOLON_TOKEN) {
+                printf("Syntax Error: Semi-Colon Not Found");
+                exit(1);
+        }
 
-                Token semi_colon_tok = get_next_token(list, pos);
-
-                printf("semi colon token here BITCHHHHHHH %s", semi_colon_tok.value);
+        if (return_value != NULL) {
+                return stmt;
         }
         return NULL;
 }
 
-Stmt *parse_statement(TokenList list, int *pos) {
+Stmt *parse_statement(TokenList list, int *pos, bool is_in_function) {
         Token next_token = get_next_token(list, pos);
         switch (next_token.type) {
                 case KEYWORD_TOKEN: {
                         return parse_var_decl(list, pos);
                 } break;
                 case IDENTIFIER_TOKEN: {
-                        Token next_token = get_next_token(list, pos);
-
-                        if (next_token.type == EQUALS_TOKEN) {
-                                get_prev_token(list, pos);
-                                return parse_var_reassignment(list, pos);
-                        }
-                        else if (next_token.type == L_PARENTHESIS) {
-                                get_prev_token(list, pos);
-                                return parse_func_call(list, pos);
-                        }
+                        return parse_var_reassignment(list, pos);
                 }
                 case IF_TOKEN: {
-                        return parse_if_stmt(list, pos);
+                        return parse_cond_stmt(list, pos);
                 } break;
                 case ELIF_TOKEN: {
                         printf("Syntax Error Cannot Use Elif Keyword Without An If Keyowrd\n");
@@ -467,8 +491,15 @@ Stmt *parse_statement(TokenList list, int *pos) {
                 case FUNC_DECL_TOKEN: {
                         return parse_funct_decl(list, pos);
                 } break;
+                case RETURN_TOKEN: {
+                        if (is_in_function) {
+                                return parse_ret_stmt(list, pos);
+                        }
+                        return NULL;
+                }
                 default:
-                        printf("Statement Invalid");
+                        printf("\nStatement Invalid \n");
+                        printf("%d POS\n", *pos);
                         break;
         }
         return NULL;
@@ -482,7 +513,7 @@ StmtList *parse(TokenList list, int *pos) {
                         break;
                 }
 
-                Stmt *currentLine = parse_statement(list, pos);
+                Stmt *currentLine = parse_statement(list, pos, 0);
                 if (currentLine != NULL) {
                         root->statements[root->count] = currentLine;
                         root->count++;
