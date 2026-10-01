@@ -4,5 +4,5 @@
 #include "../include/ast.h"
 #include "../include/value.h"
 
-Variable *eval_stmt_decl(Stmt *stmt, Scope *current_scope);
+Variable *eval_stmts(Stmt *stmt, Scope *current_scope);
 #endif // !INTERPRETER_H

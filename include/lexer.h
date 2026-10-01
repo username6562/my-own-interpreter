@@ -13,6 +13,7 @@ typedef enum {
         SEMICOLON_TOKEN,
         STRING_TOKEN,
         IDENTIFIER_TOKEN,
+        COMMA_TOKEN,
         L_PARENTHESIS, // Left Parenthesis (
         R_PARENTHESIS, // Right Pareenthesis )
         L_CURLY_BRACKETS,
@@ -21,6 +22,10 @@ typedef enum {
         IF_TOKEN,
         ELIF_TOKEN,
         ELSE_TOKEN,
+        WHILE_TOKEN,
+        FOR_TOKEN,
+        FUNC_DECL_TOKEN,
+        RETURN_TOKEN,
         EOF_TOKEN
 } TokenType;
 
