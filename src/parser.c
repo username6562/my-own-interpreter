@@ -59,7 +59,10 @@ Expr *parse_primary(TokenList list, int *pos) {
         else if (next_tok.type == IDENTIFIER_TOKEN) {
                 if (get_next_token(list, pos).type == L_PARENTHESIS) {
                         Argument *args = parse_args(list, pos);
-                        Token close_paren = get_current_token(list, pos);
+
+                        Token close_paren = get_next_token(list, pos);
+                        printf("POS %d\n", *pos);
+                        printf("token type %d \n", close_paren.type);
                         if (close_paren.type == R_PARENTHESIS) {
                                 Expr *func_expr = create_funct_call(next_tok.value, args);
 
@@ -121,7 +124,6 @@ int get_binding_power(Token token) {
  */
 Expr *parse_expr(TokenList list, int *pos, int current_binding_power) {
         Expr *left = parse_primary(list, pos);
-        printf("left value %s", left->value);
         while (true) {
                 int saved_pos = *pos;
                 Token next_tok = get_next_token(list, pos);
@@ -427,10 +429,19 @@ Argument *parse_args(TokenList list, int *pos) {
         Argument *current;
         int count = 0;
 
+        if (get_current_token(list, pos).type == R_PARENTHESIS) {
+                return NULL;
+        }
         while (get_current_token(list, pos).type != R_PARENTHESIS) {
                 Argument *a = malloc(sizeof(Argument));
+                a->next = NULL;
                 a->expr = parse_expr(list, pos, 0);
-                count++;
+
+                if (a->expr == NULL) {
+                        printf("Invalid Expression Used in Argument\n");
+                        exit(1);
+                }
+                print_expr(a->expr);
 
                 if (head == NULL) {
                         head = a;
@@ -440,8 +451,23 @@ Argument *parse_args(TokenList list, int *pos) {
                         current->next = a;
                         current = a;
                 }
-                get_next_token(list, pos);
+
+                count++;
+
+                Token tok = get_next_token(list, pos);
+
+                if (tok.type == COMMA_TOKEN) {
+                        continue;
+                }
+                if (tok.type == R_PARENTHESIS) {
+                        *pos -= 1;
+                        break;
+                }
+                printf("Syntax Error: expected ',' or ')' in argument list, got '%s'\n", tok.value);
+                exit(EXIT_FAILURE);
         }
+
+        printf("COUNT %d\n", count);
         if (head != NULL) {
                 head->count = count;
         }
@@ -498,8 +524,6 @@ Stmt *parse_statement(TokenList list, int *pos, bool is_in_function) {
                         return NULL;
                 }
                 default:
-                        printf("\nStatement Invalid \n");
-                        printf("%d POS\n", *pos);
                         break;
         }
         return NULL;

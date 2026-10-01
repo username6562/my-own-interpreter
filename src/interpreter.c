@@ -3,7 +3,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-Scope *current_scope = NULL;
+Scope *global_scope = NULL;
+FunctionList *list = NULL;
+bool has_returned_val;
+Value func_return_value;
 
 bool eval_bool_literal(Expr *expr) {
         if (strcmp(expr->value, "true") == 0) {
@@ -51,7 +54,18 @@ bool eval_comparison_expr(ExprType type, Value a, Value b) {
                         exit(EXIT_FAILURE);
         }
 }
-
+bool match_type(char *paramtype, ValueType valuetype) {
+        if (strcmp(paramtype, "int") == 0 && valuetype == INT_VAL) {
+                return true;
+        }
+        else if (strcmp(paramtype, "bool") == 0 && valuetype == BOOL_VAL) {
+                return true;
+        }
+        else if (strcmp(paramtype, "string") == 0 && valuetype == STRING_VAL) {
+                return true;
+        }
+        return false;
+}
 Value eval_expr(Scope *current_scope, Expr *expr) {
         switch (expr->type) {
                 case INT_LITERAL: {
@@ -75,7 +89,13 @@ Value eval_expr(Scope *current_scope, Expr *expr) {
                         return value;
                 } break;
                 case IDENTIFIER_LITERAL: {
-                        Value value = get_variable(current_scope, expr->value)->value;
+                        Variable *var = get_variable(current_scope, expr->value);
+
+                        if (var == NULL) {
+                                printf("Failed To Find Variable %s\n", var->name);
+                                exit(EXIT_FAILURE);
+                        }
+                        Value value = var->value;
                         return value;
                 }
                 case ADDITION_OP: {
@@ -158,6 +178,54 @@ Value eval_expr(Scope *current_scope, Expr *expr) {
                             eval_comparison_expr(EQUALS_TO_OP, left_val, right_val);
                         return result;
                 } break;
+                case FUNC_CALL_EXPR: {
+                        Function *function = get_function(expr->func_call.name);
+
+                        if (function == NULL) {
+                                printf("Run Time Error: Could Not Find Function %s",
+                                       expr->func_call.name);
+                        }
+                        if (expr->func_call.args->count != function->params->count) {
+                                printf("Expected %d arguments but only found %d",
+                                       function->params->count, expr->func_call.args->count);
+                        }
+
+                        Scope *func_scope = enter_scope(current_scope);
+                        while (expr->func_call.args != NULL && function->params != NULL) {
+                                Argument *arg = expr->func_call.args;
+                                Parameter *param = function->params;
+
+                                Value arg_val = eval_expr(current_scope, arg->expr);
+
+                                if (match_type(param->type, arg_val.type)) {
+                                        Variable *var = create_variable();
+
+                                        var->name = param->name;
+                                        var->value = arg_val;
+
+                                        set_variable(func_scope, var);
+                                }
+
+                                arg = arg->next;
+                                param = param->next;
+                        }
+
+                        for (int i = 0; i < function->body->count && has_returned_val == false;
+                             i++) {
+                                eval_stmts(function->body->statements[i], func_scope);
+                        }
+
+                        if (has_returned_val) {
+                                printf("return value is %d\n", func_return_value.as.int_val);
+                                return func_return_value;
+                        }
+                        else {
+                                return nil_var();
+                        }
+
+                        has_returned_val = false;
+                        exit_scope(func_scope);
+                } break;
                 default:
                         perror("Run Time Error Operator Not Supported By "
                                "Interpreter\n");
@@ -167,7 +235,7 @@ Value eval_expr(Scope *current_scope, Expr *expr) {
 }
 
 Variable *eval_stmts(Stmt *stmt, Scope *current_scope) {
-        printf("Processing statement type: %d\n", stmt->type);
+        // printf("\nProcessing statement type: %d\n", stmt->type);
         switch (stmt->type) {
                 case VAR_DECL_STMT: {
                         if (strcmp(stmt->variable_decl.type, "int") == 0) {
@@ -263,6 +331,32 @@ Variable *eval_stmts(Stmt *stmt, Scope *current_scope) {
                         }
 
                 } break;
+                case FOR_STMT: {
+                        Value count = eval_expr(current_scope, stmt->for_stmt.count);
+
+                        if (count.type != INT_VAL) {
+                                printf("Invalid Expression Used In The For Loop");
+                                exit(EXIT_FAILURE);
+                        }
+
+                        Scope *for_scope = enter_scope(current_scope);
+
+                        /*
+                         * The Inner Loop is to Run through All The Statements In the For Loop
+                         * and Evaluate them
+                         * The Outer For Loop Repeats the Evaluation The Number Of Times In the
+                         * Expression
+                         */
+
+                        for (int i = 0; i < count.as.int_val; i++) {
+                                for (int j = 0; j < stmt->for_stmt.stmts->count; i++) {
+                                        Stmt *current_stmt = stmt->for_stmt.stmts->statements[j];
+
+                                        eval_stmts(current_stmt, for_scope);
+                                }
+                        }
+                        exit_scope(for_scope);
+                } break;
                 case ELSE_STMT: {
                         for (int i = 0; i < stmt->else_stmt.stmts->count; i++) {
                                 Stmt *current_stmt = stmt->else_stmt.stmts->statements[i];
@@ -271,19 +365,40 @@ Variable *eval_stmts(Stmt *stmt, Scope *current_scope) {
                         }
                 } break;
                 case WHILE_STMT: {
-                        Value while_condition =
-                            eval_expr(current_scope, stmt->while_stmt.condition);
-                        int i = 0;
+                        Expr *while_cond_expr = stmt->while_stmt.condition;
 
-                        while (while_condition.as.bool_val == true) {
-                                Stmt *current_stmt = stmt->while_stmt.stmts->statements[i++];
-                                eval_stmts(current_stmt, current_scope);
+                        StmtList *while_stmt = stmt->while_stmt.stmts;
+                        int i = 0;
+                        while (true) {
+                                Value while_condition = eval_expr(current_scope, while_cond_expr);
+
+                                if (while_condition.as.bool_val == false) {
+                                        break;
+                                }
+                                for (int i = 0; i < while_stmt->count; i++) {
+                                        Stmt *current_stmt = while_stmt->statements[i];
+                                        eval_stmts(current_stmt, current_scope);
+                                }
+                                i++;
                         }
-                        printf("loop ran %d time", i);
+                        printf("loop ran %d times\n", i);
+                } break;
+                case FUNC_DECL_STMT: {
+                        Function *func = malloc(sizeof(Function));
+                        func->name = stmt->func_decl.func_name;
+                        func->body = stmt->func_decl.stmts;
+                        func->params = stmt->func_decl.params;
+
+                        add_function(func);
 
                 } break;
+                case RETURN_STMT: {
+                        func_return_value = eval_expr(current_scope, stmt->return_stmt.ret_value);
+                        has_returned_val = true;
+                } break;
                 default:
-                        printf("Warning: Unknown or unhandled statement type %d\n", stmt->type);
+                        // printf("\nWarning: Unknown or unhandled statement type %d\n",
+                        // stmt->type);
                         return NULL;
                         break;
         }

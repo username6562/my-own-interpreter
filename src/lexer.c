@@ -1,5 +1,6 @@
 #include "../include/lexer.h"
 #include <ctype.h>
+#include <iso646.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -87,8 +88,11 @@ Token tokenize(char *value, bool isString) {
                  strcmp(t.value, "*") == 0 || strcmp(t.value, "/") == 0 ||
                  strcmp(t.value, "==") == 0 || strcmp(t.value, "<=") == 0 ||
                  strcmp(t.value, ">=") == 0 || strcmp(t.value, ">") == 0 ||
-                 strcmp(t.value, ">") == 0) {
+                 strcmp(t.value, "<") == 0) {
                 t.type = BINARYOP_TOKEN;
+        }
+        else if (strcmp(t.value, "return") == 0) {
+                t.type = RETURN_TOKEN;
         }
         // Equals To Sign
         else if (strcmp(t.value, "=") == 0) {
@@ -115,6 +119,15 @@ Token tokenize(char *value, bool isString) {
         else if (strcmp(t.value, "else") == 0) {
                 t.type = ELSE_TOKEN;
         }
+        else if (strcmp(t.value, "while") == 0) {
+                t.type = WHILE_TOKEN;
+        }
+        else if (strcmp(t.value, "for") == 0) {
+                t.type = FOR_TOKEN;
+        }
+        else if (strcmp(t.value, "func") == 0) {
+                t.type = FUNC_DECL_TOKEN;
+        }
         // Identifiers
         else if (isalpha(t.value[0])) {
                 t.type = IDENTIFIER_TOKEN;
@@ -125,6 +138,9 @@ Token tokenize(char *value, bool isString) {
         }
         else if (strcmp(t.value, ")") == 0) {
                 t.type = R_PARENTHESIS;
+        }
+        else if (strcmp(t.value, ",") == 0) {
+                t.type = COMMA_TOKEN;
         }
         else if (strcmp(t.value, ")") == 0) {
                 t.type = IF_TOKEN;
@@ -169,6 +185,7 @@ TokenList create_token_list(const char *source) {
                         case ')':
                         case '{':
                         case '}':
+                        case ',':
                                 lexeme[0] = source[i];
                                 lexeme[1] = '\0';
                                 list.tokens[list.count] = tokenize(lexeme, false);

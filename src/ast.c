@@ -10,6 +10,8 @@ Expr *create_int_literal(char *value) {
         expr->right = NULL;
         expr->type = INT_LITERAL;
 
+        expr->func_call.name = NULL;
+        expr->func_call.args = NULL;
         return expr;
 }
 
@@ -20,6 +22,8 @@ Expr *create_identifier_literal(char *value) {
         expr->right = NULL;
         expr->type = IDENTIFIER_LITERAL;
 
+        expr->func_call.name = NULL;
+        expr->func_call.args = NULL;
         return expr;
 }
 
@@ -29,6 +33,9 @@ Expr *create_bool_literal(char *value) {
         expr->left = NULL;
         expr->right = NULL;
         expr->type = BOOL_LITERAL;
+
+        expr->func_call.name = NULL;
+        expr->func_call.args = NULL;
 
         return expr;
 }
@@ -40,6 +47,20 @@ Expr *create_string_literal(char *value) {
         expr->right = NULL;
         expr->type = STRING_LITERAL;
 
+        expr->func_call.name = NULL;
+        expr->func_call.args = NULL;
+        return expr;
+}
+
+Expr *create_funct_call(char *func_name, Argument *args) {
+        Expr *expr = malloc(sizeof(Expr));
+        expr->value = NULL;
+        expr->left = NULL;
+        expr->right = NULL;
+        expr->type = FUNC_CALL_EXPR;
+
+        expr->func_call.name = func_name;
+        expr->func_call.args = args;
         return expr;
 }
 
@@ -50,6 +71,8 @@ Expr *create_binary_expr(char *operator, Expr *left, Expr *right, ExprType type)
         expr->right = right;
         expr->type = type;
 
+        expr->func_call.name = NULL;
+        expr->func_call.args = NULL;
         return expr;
 }
 
@@ -81,6 +104,42 @@ Stmt *create_if_stmt(Expr *condition) {
 
         return stmt;
 }
+Stmt *create_else_stmt() {
+        Stmt *stmt = malloc(sizeof(Stmt));
+        stmt->type = ELSE_STMT;
+        stmt->else_stmt.stmts = create_stmt_list();
+
+        return stmt;
+}
+
+Stmt *create_for_stmt(Expr *iterate) {
+        Stmt *stmt = malloc(sizeof(Stmt));
+        stmt->type = FOR_STMT;
+        stmt->for_stmt.count = iterate;
+        stmt->for_stmt.stmts = create_stmt_list();
+
+        return stmt;
+}
+
+Stmt *create_while_stmt(Expr *condition) {
+        Stmt *stmt = malloc(sizeof(Stmt));
+        stmt->while_stmt.condition = condition;
+        stmt->type = WHILE_STMT;
+        stmt->while_stmt.stmts = create_stmt_list();
+
+        return stmt;
+}
+
+Stmt *create_func_decl_stmt(char *func_name, Parameter *params) {
+        Stmt *stmt = malloc(sizeof(Stmt));
+        stmt->type = FUNC_DECL_STMT;
+        stmt->func_decl.func_name = func_name;
+        stmt->func_decl.params = params;
+        stmt->func_decl.stmts = create_stmt_list();
+
+        return stmt;
+}
+
 StmtList *create_stmt_list() {
         StmtList *list = malloc(sizeof(StmtList));
         list->statements = malloc(sizeof(Stmt *) * 100);
@@ -115,8 +174,7 @@ void print_stmt_list(StmtList *list) {
                                         if (stmt->variable_decl.type != NULL)
                                                 printf("VARIABLE TYPE: %s\n",
                                                        stmt->variable_decl.type);
-                                        printf("VARIABLE NAME: %s\n",
-                                               stmt->variable_decl.var_name);
+                                        printf("VARIABLE NAME: %s\n", stmt->variable_decl.var_name);
                                         printf("VALUE\n");
                                         if (stmt->variable_decl.value != NULL) {
                                                 print_expr(stmt->variable_decl.value);
@@ -128,8 +186,7 @@ void print_stmt_list(StmtList *list) {
                                 }
                                 case VAR_REASSIGN_STMT: {
                                         printf("TYPE: VAR_REASSIGN_STMT");
-                                        printf("VARIABLE NAME: %s\n",
-                                               stmt->variable_decl.var_name);
+                                        printf("VARIABLE NAME: %s\n", stmt->variable_decl.var_name);
                                         printf("VALUE\n");
                                         if (stmt->variable_decl.value != NULL) {
                                                 print_expr(stmt->variable_decl.value);
@@ -141,10 +198,12 @@ void print_stmt_list(StmtList *list) {
                                 case IF_STMT:
                                         printf("TYPE: IF_STMT");
                                         printf("\n STMTS IN IF_STMT");
-                                        printf("if stmt count %d",
-                                               stmt->if_stmt.stmts->count);
+                                        printf("if stmt count %d", stmt->if_stmt.stmts->count);
                                         print_stmt_list(stmt->if_stmt.stmts);
                                         break;
+                                case FUNC_DECL_STMT: {
+                                        printf("function name %s\n", stmt->func_decl.func_name);
+                                }
                                 default:
                                         printf("Statement Type Not Fount\n");
                         }
@@ -250,7 +309,31 @@ void print_expr(Expr *expr) {
                         printf("\tRIGHT (==)kj: ");
                         print_expr(expr->right);
                         break;
+                case FUNC_CALL_EXPR: {
+                        printf("\nFUNCTION NAME %s\n", expr->func_call.name);
+                } break;
                 default:
                         printf("Unknown Expr %s\n", expr->value);
+        }
+}
+
+void print_param(Parameter *head) {
+        int i = 0;
+        while (head != NULL) {
+                i++;
+                printf("%d Param type %s Param name %s\n", i, head->type, head->name);
+
+                head = head->next;
+        }
+}
+
+void print_args(Argument *head) {
+        int i = 0;
+
+        while (head != NULL) {
+                i++;
+                printf("%d Param %s\n", i, head->expr->value);
+
+                head = head->next;
         }
 }
