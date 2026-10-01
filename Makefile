@@ -2,9 +2,10 @@
 CC = gcc
 
 SRC = src/*.c
+HEADER  = include/*.h
 OUT = myopl.exe
 
-CFLAGS = -Wall -Wextra   -std=c99  
+CFLAGS = -Wall -Wextra   -std=c99   
 LIBS = -lraylib -lopengl32 -lgdi32 -lwinmm
 all: build run
 build:
@@ -21,4 +22,5 @@ clean:
 #	del /q *.o *.exe FrontEnd/*.o  2>nul
 	rm -f *.o *.exe FrontEnd/*.o
 
-	
+format:
+	clang-format -i $(SRC) $(HEADER)
