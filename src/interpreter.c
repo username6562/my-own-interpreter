@@ -25,24 +25,18 @@ bool eval_comparison_expr(ExprType type, Value a, Value b) {
         switch (type) {
                 case LESS_THAN_OP:
                         return a.as.int_val < b.as.int_val;
-                        break;
                 case GREATER_THAN_OP:
                         return a.as.int_val > b.as.int_val;
-                        break;
                 case LT_OR_EQUAL_TO:
                         return a.as.int_val <= b.as.int_val;
-                        break;
                 case GT_OR_EQUAL_TO:
                         return a.as.int_val >= b.as.int_val;
-                        break;
                 case EQUALS_TO_OP:
                         switch (a.type) {
                                 case INT_VAL:
                                         return a.as.int_val == b.as.int_val;
-                                        break;
                                 case BOOL_VAL:
                                         return a.as.bool_val == b.as.bool_val;
-                                        break;
                                 default:
                                         perror("Value type is not Supported By "
                                                "The EQUALS TO OPERATOR");
@@ -191,11 +185,17 @@ Value eval_expr(Scope *current_scope, Expr *expr) {
                         }
 
                         Scope *func_scope = enter_scope(current_scope);
-                        while (expr->func_call.args != NULL && function->params != NULL) {
-                                Argument *arg = expr->func_call.args;
-                                Parameter *param = function->params;
 
-                                Value arg_val = eval_expr(current_scope, arg->expr);
+                        Parameter *param = function->params;
+                        Argument *args = expr->func_call.args;
+                        while (param != NULL) {
+
+                                if (args == NULL) {
+                                        fprintf(stderr,
+                                                "RunTime Error Invalid Number of Arguments Found");
+                                }
+
+                                Value arg_val = eval_expr(current_scope, args->expr);
 
                                 if (match_type(param->type, arg_val.type)) {
                                         Variable *var = create_variable();
@@ -206,7 +206,7 @@ Value eval_expr(Scope *current_scope, Expr *expr) {
                                         set_variable(func_scope, var);
                                 }
 
-                                arg = arg->next;
+                                args = args->next;
                                 param = param->next;
                         }
 
@@ -216,7 +216,6 @@ Value eval_expr(Scope *current_scope, Expr *expr) {
                         }
 
                         if (has_returned_val) {
-                                printf("return value is %d\n", func_return_value.as.int_val);
                                 return func_return_value;
                         }
                         else {
@@ -225,6 +224,21 @@ Value eval_expr(Scope *current_scope, Expr *expr) {
 
                         has_returned_val = false;
                         exit_scope(func_scope);
+                } break;
+                case UNARY_OP: {
+                        if (expr->unary_expr.type == MINUS_OP) {
+                                Value val = eval_expr(current_scope, expr->unary_expr.operand);
+
+                                if (val.type == INT_VAL) {
+                                        val.as.int_val *= -1;
+                                        return val;
+                                }
+                                else {
+                                        fprintf(
+                                            stderr,
+                                            "Run Time Error Invalid Type Used After The Prefix\n");
+                                }
+                        }
                 } break;
                 default:
                         perror("Run Time Error Operator Not Supported By "
