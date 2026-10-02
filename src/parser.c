@@ -12,6 +12,7 @@
  *  - pos: current index of array
  */
 Expr *parse_expr(TokenList list, int *pos, int current_binding_power);
+Expr *parse_prefix(TokenList list, int *pos);
 
 Argument *parse_args(TokenList list, int *pos);
 Token get_current_token(TokenList list, int *pos) {
@@ -105,9 +106,8 @@ int get_binding_power(Token token) {
                         return 20;
                 }
                 else if (strcmp(token.value, "==") == 0 || strcmp(token.value, "<=") == 0 ||
-                         strcmp(token.value, ">=") == 0 ||
-                         strcmp(token.value, "<") == 0 || // ← ADD THIS
-                         strcmp(token.value, ">") == 0) { // ← Keep this
+                         strcmp(token.value, ">=") == 0 || strcmp(token.value, "<") == 0 ||
+                         strcmp(token.value, ">") == 0) {
                         return 10;
                 }
         }
@@ -117,13 +117,38 @@ int get_binding_power(Token token) {
         return 0;
 }
 
+Expr *parse_prefix(TokenList list, int *pos) {
+        int saved_pos = *pos;
+        Token tok = get_next_token(list, pos);
+
+        if (tok.type == BINARYOP_TOKEN) {
+                if (strcmp(tok.value, "-") == 0) {
+                        Expr *operand = parse_expr(list, pos, UNARY_BP);
+
+                        return create_unary_expr(MINUS_OP, operand, "-");
+                }
+                else if (strcmp(tok.value, "+") == 0) {
+                        return parse_expr(list, pos, 0);
+                }
+                else {
+                        fprintf(stderr, "Invalid Prefix Operator\n");
+                        exit(1);
+                }
+        }
+
+        *pos = saved_pos;
+
+        return parse_primary(list, pos);
+}
+
 /*
  * Parameters: collect a list of tokens in their order and returns a fully
  * functional Node Tree which will get evaluated by the evaluator For more
  * context on how it works go to  ../docs/Parser.md
  */
 Expr *parse_expr(TokenList list, int *pos, int current_binding_power) {
-        Expr *left = parse_primary(list, pos);
+        Expr *left = parse_prefix(list, pos);
+
         while (true) {
                 int saved_pos = *pos;
                 Token next_tok = get_next_token(list, pos);
@@ -250,7 +275,7 @@ Stmt *parse_else_stmt(TokenList list, int *pos) {
         Token next_tok = get_next_token(list, pos);
 
         if (next_tok.type == L_CURLY_BRACKETS) {
-                Stmt *stmt = create_else_stmt();
+                Stmt *stmt = stmt_create_else();
                 while (true) {
                         if (get_current_token(list, pos).type == R_CURLY_BRACKET) {
                                 break;
@@ -288,7 +313,7 @@ Stmt *parse_cond_stmt(TokenList list, int *pos) {
                         Token left_curly_tok = get_next_token(list, pos);
                         if (left_curly_tok.type == L_CURLY_BRACKETS) {
 
-                                Stmt *stmt = create_if_stmt(coondition_node);
+                                Stmt *stmt = stmt_create_if(coondition_node);
 
                                 while (true) {
                                         if (get_current_token(list, pos).type == R_CURLY_BRACKET ||
@@ -341,7 +366,7 @@ Stmt *parse_while_stmt(TokenList list, int *pos) {
                         Token left_curly_tok = get_next_token(list, pos);
 
                         if (left_curly_tok.type == L_CURLY_BRACKETS) {
-                                Stmt *stmt = create_while_stmt(condition_node);
+                                Stmt *stmt = stmt_create_while(condition_node);
 
                                 parse_block(stmt->while_stmt.stmts, list, pos, false);
                                 return stmt;
@@ -362,7 +387,7 @@ Stmt *parse_for_stmt(TokenList list, int *pos) {
                         Token left_curly_tok = get_next_token(list, pos);
 
                         if (left_curly_tok.type == L_CURLY_BRACKETS) {
-                                Stmt *stmt = create_for_stmt(count);
+                                Stmt *stmt = stmt_create_for(count);
                                 parse_block(stmt->for_stmt.stmts, list, pos, false);
 
                                 return stmt;
@@ -414,7 +439,7 @@ Stmt *parse_funct_decl(TokenList list, int *pos) {
                 Parameter *params = parse_parameter(list, pos);
 
                 if (get_next_token(list, pos).type == L_CURLY_BRACKETS) {
-                        Stmt *stmt = create_func_decl_stmt(func_name.value, params);
+                        Stmt *stmt = stmt_create_func_decl(func_name.value, params);
                         parse_block(stmt->func_decl.stmts, list, pos, true);
 
                         return stmt;
@@ -515,6 +540,11 @@ Stmt *parse_statement(TokenList list, int *pos, bool is_in_function) {
                         return parse_for_stmt(list, pos);
                 } break;
                 case FUNC_DECL_TOKEN: {
+                        if (is_in_function) {
+                                fprintf(stderr, "Syntax Error Cannot Declare A Function Inside "
+                                                "Another Function\n");
+                                exit(1);
+                        }
                         return parse_funct_decl(list, pos);
                 } break;
                 case RETURN_TOKEN: {
