@@ -203,7 +203,6 @@ TokenList create_token_list(const char *source) {
                                 lexeme[pos] = '\0';
                                 list.tokens[list.count] = tokenize(lexeme, true);
                                 list.count++;
-                                break;
                         } break;
 
                         case '<': {
@@ -216,7 +215,6 @@ TokenList create_token_list(const char *source) {
                                         list.tokens[list.count] = tokenize("<", false);
                                         list.count++;
                                         i--;
-                                        break;
                                 }
                         } break;
                         case '>': {
@@ -242,7 +240,6 @@ TokenList create_token_list(const char *source) {
                                         list.tokens[list.count] = tokenize("=", false);
                                         list.count++;
                                         i--;
-                                        break;
                                 }
                         } break;
                         default:
